@@ -46,7 +46,7 @@ final class WarmUpSession: ObservableObject {
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t
-        if phase == .exercising { announce() } else { speak("Get ready") }
+        if phase == .exercising { announce() } else { speak(tr("Get ready", "Приготуйся", "Приготовься")) }
     }
 
     private func tick() {
@@ -100,7 +100,7 @@ final class WarmUpSession: ObservableObject {
         phase = .finished
         stopTimer()
         SoundPlayer.shared.play(.success)
-        speak(completedFully ? "Great job!" : "Nice work!")
+        speak(completedFully ? tr("Great job!", "Чудова робота!", "Отличная работа!") : tr("Nice work!", "Молодець!", "Молодец!"))
         onComplete?(self)
     }
 
@@ -123,6 +123,7 @@ final class WarmUpSession: ObservableObject {
         guard s.speakExercises else { return }
         speech.stopSpeaking(at: .word)
         let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: L10n.lang.speechCode)
         utterance.volume = Float(max(0.2, s.volume))
         speech.speak(utterance)
     }
@@ -166,7 +167,7 @@ final class WarmUpController: NSObject, NSWindowDelegate {
         window.styleMask = [.titled, .closable, .fullSizeContentView]
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
-        window.title = "Warm-up"
+        window.title = tr("Warm-up", "Розминка", "Разминка")
         window.isMovableByWindowBackground = true
         window.level = .floating
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
@@ -224,6 +225,8 @@ struct WarmUpView: View {
             }
         }
         .frame(width: 440, height: 600)
+        .environment(\.locale, L10n.locale)
+        .id(store.settings.language)
     }
 
     // MARK: Get ready
@@ -231,7 +234,7 @@ struct WarmUpView: View {
     private var getReady: some View {
         VStack(spacing: 18) {
             Spacer()
-            Text("Stand up & get ready!")
+            Text(tr("Stand up & get ready!", "Вставай і готуйся!", "Вставай и готовься!"))
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
             ZStack {
                 ProgressRing(progress: 1 - session.getReadyRemaining / 3, lineWidth: 10, tint: store.accent)
@@ -244,11 +247,12 @@ struct WarmUpView: View {
             if store.settings.petEnabled {
                 PetView(look: store.petLook, mood: .happy).frame(width: 110, height: 110)
             }
-            Text("First up: \(session.current.emoji) \(session.current.name)")
+            Text(tr("First up: \(session.current.emoji) \(session.current.name)", "Спершу: \(session.current.emoji) \(session.current.name)",
+                    "Сначала: \(session.current.emoji) \(session.current.name)"))
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.secondary)
             Spacer()
-            Button("Skip countdown") { session.skip() }
+            Button(tr("Skip countdown", "Без відліку", "Без отсчёта")) { session.skip() }
                 .buttonStyle(PillButtonStyle(compact: true))
                 .padding(.bottom, 24)
         }
@@ -261,9 +265,10 @@ struct WarmUpView: View {
         let exercise = session.current
         return VStack(spacing: 14) {
             HStack {
-                Text("Warm-up").font(.system(size: 14, weight: .bold, design: .rounded))
+                Text(tr("Warm-up", "Розминка", "Разминка")).font(.system(size: 14, weight: .bold, design: .rounded))
                 Spacer()
-                Text("\(session.index + 1) of \(session.routine.count)")
+                Text(tr("\(session.index + 1) of \(session.routine.count)", "\(session.index + 1) з \(session.routine.count)",
+                        "\(session.index + 1) из \(session.routine.count)"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
@@ -320,9 +325,9 @@ struct WarmUpView: View {
 
             Group {
                 if let next = session.next {
-                    Text("Up next: \(next.emoji) \(next.name)")
+                    Text(tr("Up next: \(next.emoji) \(next.name)", "Далі: \(next.emoji) \(next.name)", "Далее: \(next.emoji) \(next.name)"))
                 } else {
-                    Text("Last one. Finish strong! 💪")
+                    Text(tr("Last one. Finish strong! 💪", "Остання вправа. Фінішуй потужно! 💪", "Последнее упражнение. Финишируй мощно! 💪"))
                 }
             }
             .font(.system(size: 12, weight: .medium))
@@ -332,10 +337,11 @@ struct WarmUpView: View {
 
             HStack(spacing: 10) {
                 Button { session.isPaused.toggle() } label: {
-                    Label(session.isPaused ? "Resume" : "Pause", systemImage: session.isPaused ? "play.fill" : "pause.fill")
+                    Label(session.isPaused ? tr("Resume", "Продовжити", "Продолжить") : tr("Pause", "Пауза", "Пауза"),
+                          systemImage: session.isPaused ? "play.fill" : "pause.fill")
                 }
-                Button { session.skip() } label: { Label("Skip", systemImage: "forward.fill") }
-                Button { endEarly() } label: { Label("End", systemImage: "xmark") }
+                Button { session.skip() } label: { Label(tr("Skip", "Пропустити", "Пропустить"), systemImage: "forward.fill") }
+                Button { endEarly() } label: { Label(tr("End", "Завершити", "Завершить"), systemImage: "xmark") }
             }
             .buttonStyle(PillButtonStyle())
         }
@@ -361,6 +367,12 @@ struct WarmUpView: View {
 
     // MARK: Finished
 
+    private func movedLabel(minutes: Int, seconds: Int) -> String {
+        let time = (minutes > 0 ? Words.minutes(minutes) + " " : "") + Words.seconds(seconds)
+        let xp = session.rewardXP
+        return tr("\(time) of moving · +\(xp) XP", "\(time) руху · +\(xp) XP", "\(time) движения · +\(xp) XP")
+    }
+
     private var finished: some View {
         let info = PetState.levelInfo(xp: store.pet.xp)
         let streak = store.currentStreak()
@@ -374,15 +386,16 @@ struct WarmUpView: View {
                 } else {
                     Text("🎉").font(.system(size: 90))
                 }
-                Text(session.completedFully ? "Warm-up complete!" : "Nice, every bit counts!")
+                Text(session.completedFully ? tr("Warm-up complete!", "Розминку завершено!", "Разминка завершена!")
+                                            : tr("Nice, every bit counts!", "Супер, кожна хвилина рахується!", "Супер, каждая минута на счету!"))
                     .font(.system(size: 25, weight: .heavy, design: .rounded))
-                Text("\(minutes > 0 ? "\(minutes) min " : "")\(seconds) s of moving · +\(session.rewardXP) XP")
+                Text(movedLabel(minutes: minutes, seconds: seconds))
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
                 HStack(spacing: 8) {
-                    StatTile(title: "Level", value: "\(info.level)")
-                    StatTile(title: "Today", value: "\(store.today.standupsDone)/\(store.settings.dailyGoal)")
-                    StatTile(title: "Streak", value: streak > 0 ? "\(streak) 🔥" : "0")
+                    StatTile(title: tr("Level", "Рівень", "Уровень"), value: "\(info.level)")
+                    StatTile(title: tr("Today", "Сьогодні", "Сегодня"), value: "\(store.today.standupsDone)/\(store.settings.dailyGoal)")
+                    StatTile(title: tr("Streak", "Серія", "Серия"), value: streak > 0 ? "\(streak) 🔥" : "0")
                 }
                 .frame(maxWidth: 340)
                 if let toast = store.toast {
@@ -390,7 +403,7 @@ struct WarmUpView: View {
                         .frame(maxWidth: 340)
                 }
                 Spacer()
-                Button("Back to work 💪") { onClose() }
+                Button(tr("Back to work 💪", "Назад до роботи 💪", "Обратно к работе 💪")) { onClose() }
                     .buttonStyle(PillButtonStyle(prominent: true, tint: store.accent))
                     .frame(width: 230)
                     .keyboardShortcut(.defaultAction)

@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let reminderPanel = ReminderPanelController()
     private let warmUp = WarmUpController()
     private var settingsWindow: NSWindow?
+    private var settingsHeight: CGFloat = 0
     private let settingsNavigation = SettingsNavigation()
     private var cancellables = Set<AnyCancellable>()
 
@@ -27,7 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: Launch
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if let id = Bundle.main.bundleIdentifier {
+        if let id = Bundle.main.bundleIdentifier, !CommandLine.arguments.contains("--snapshot") {
             let others = NSRunningApplication.runningApplications(withBundleIdentifier: id)
                 .filter { $0 != NSRunningApplication.current }
             if !others.isEmpty {
@@ -54,10 +55,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .sink { [weak self] _ in self?.refreshStatusItem() }
             .store(in: &cancellables)
         store.$settings
-            .map { "\($0.petEnabled)\($0.petSpecies)\($0.petColorHex)\($0.petAccessory)\($0.showCountdown)" }
+            .map { "\($0.petEnabled)\($0.petSpecies)\($0.petColorHex)\($0.petBellyHex)\($0.petHead)\($0.petHands)\($0.petNeck)\($0.showCountdown)\($0.language)" }
             .removeDuplicates()
             .sink { [weak self] _ in
                 DispatchQueue.main.async { self?.refreshStatusItem(force: true) }
+            }
+            .store(in: &cancellables)
+        store.$settings
+            .map(\.language)
+            .removeDuplicates()
+            .dropFirst()
+            .sink { [weak self] _ in
+                DispatchQueue.main.async { self?.languageDidChange() }
             }
             .store(in: &cancellables)
 
@@ -195,7 +204,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         button.action = #selector(statusItemClicked(_:))
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         button.imagePosition = .imageLeading
-        button.toolTip = "StandUp Pal: click for your pet, right-click for options"
+        button.toolTip = statusToolTip
+    }
+
+    private var statusToolTip: String {
+        tr("StandUp Pal: click for your pet, right-click for options",
+           "StandUp Pal: клацни — улюбленець, правий клік — меню",
+           "StandUp Pal: клик — питомец, правый клик — меню")
+    }
+
+    private func languageDidChange() {
+        installMainMenu()
+        statusItem.button?.toolTip = statusToolTip
+        settingsWindow?.title = settingsTitle
+        refreshStatusItem(force: true)
     }
 
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
@@ -212,7 +234,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let s = store.settings
         let now = scheduler.now
         let mood = scheduler.petMood(at: now)
-        let signature = "\(s.petEnabled)|\(mood.rawValue)|\(s.petSpecies.rawValue)|\(s.petColorHex)|\(s.petAccessory.rawValue)"
+        let signature = "\(s.petEnabled)|\(mood.rawValue)|\(PetLook.from(s))"
         if force || signature != iconSignature {
             iconSignature = signature
             rebuildIcon(mood: mood)
@@ -227,9 +249,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func statusText(_ now: Date) -> String {
-        if scheduler.active != nil { return "Now!" }
-        if scheduler.holdReason != nil, !scheduler.queue.isEmpty { return "Later" }
-        if scheduler.isPaused(now) { return "Paused" }
+        if scheduler.active != nil { return tr("Now!", "Зараз!", "Сейчас!") }
+        if scheduler.holdReason != nil, !scheduler.queue.isEmpty { return tr("Later", "Пізніше", "Позже") }
+        if scheduler.isPaused(now) { return tr("Paused", "Пауза", "Пауза") }
         guard let next = scheduler.nextStandup else { return "" }
         let seconds = next.timeIntervalSince(now)
         // Keep the menu bar clean overnight and on weekends.
@@ -334,22 +356,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let header = NSMenuItem(title: menuHeader(now), action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
-        menu.addItem(item("Start warm-up now", #selector(menuStartWarmUp)))
+        menu.addItem(item(tr("Start warm-up now", "Почати розминку зараз", "Начать разминку сейчас"), #selector(menuStartWarmUp)))
         menu.addItem(.separator())
 
-        menu.addItem(check("Sound", s.soundEnabled, #selector(menuToggleSound)))
-        menu.addItem(check("Pet", s.petEnabled, #selector(menuTogglePet)))
-        menu.addItem(check("Show countdown", s.showCountdown, #selector(menuToggleCountdown)))
+        menu.addItem(check(tr("Sound", "Звук", "Звук"), s.soundEnabled, #selector(menuToggleSound)))
+        menu.addItem(check(tr("Pet", "Улюбленець", "Питомец"), s.petEnabled, #selector(menuTogglePet)))
+        menu.addItem(check(tr("Show countdown", "Показувати відлік", "Показывать отсчёт"), s.showCountdown, #selector(menuToggleCountdown)))
 
         let paused = scheduler.isPaused(now)
-        let pauseItem = NSMenuItem(title: paused ? "Paused until \(Clock.time(store.runtime.pausedUntil ?? now))" : "Pause reminders",
+        let until = Clock.time(store.runtime.pausedUntil ?? now)
+        let pauseItem = NSMenuItem(title: paused ? tr("Paused until \(until)", "Пауза до \(until)", "Пауза до \(until)")
+                                                 : tr("Pause reminders", "Призупинити нагадування", "Приостановить напоминания"),
                                    action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         if paused {
-            submenu.addItem(item("Resume now", #selector(menuResume)))
+            submenu.addItem(item(tr("Resume now", "Продовжити зараз", "Продолжить сейчас"), #selector(menuResume)))
             submenu.addItem(.separator())
         }
-        for (title, minutes) in [("30 minutes", 30), ("1 hour", 60), ("2 hours", 120), ("Until tomorrow", -1)] {
+        let choices = [(Words.minutesLong(30), 30), (Words.hours(1), 60), (Words.hours(2), 120),
+                       (tr("Until tomorrow", "До завтра", "До завтра"), -1)]
+        for (title, minutes) in choices {
             let entry = item(title, #selector(menuPause(_:)))
             entry.tag = minutes
             submenu.addItem(entry)
@@ -357,20 +383,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         pauseItem.submenu = submenu
         menu.addItem(pauseItem)
 
+        let languageItem = NSMenuItem(title: tr("Language", "Мова", "Язык"), action: nil, keyEquivalent: "")
+        let languages = NSMenu()
+        for language in AppLanguage.allCases {
+            let entry = check(language.nativeName, s.language == language, #selector(menuLanguage(_:)))
+            entry.representedObject = language.rawValue
+            languages.addItem(entry)
+        }
+        languageItem.submenu = languages
+        menu.addItem(languageItem)
+
         menu.addItem(.separator())
-        menu.addItem(item("Settings…", #selector(menuOpenSettings), key: ","))
-        menu.addItem(item("Quit StandUp Pal", #selector(menuQuit), key: "q"))
+        menu.addItem(item(tr("Settings…", "Налаштування…", "Настройки…"), #selector(menuOpenSettings), key: ","))
+        menu.addItem(item(tr("Quit StandUp Pal", "Вийти з StandUp Pal", "Выйти из StandUp Pal"), #selector(menuQuit), key: "q"))
         return menu
     }
 
     private func menuHeader(_ now: Date) -> String {
-        if scheduler.active != nil { return "Stand-up time!" }
+        if scheduler.active != nil { return tr("Stand-up time!", "Час перерви!", "Время перерыва!") }
         if let next = scheduler.nextStandup {
             let sameDay = Clock.calendar.isDate(next, inSameDayAs: now)
-            let when = sameDay ? Clock.time(next) : next.formatted(.dateTime.weekday(.abbreviated).hour().minute())
-            return "Next stand-up: \(when)"
+            let when = sameDay ? Clock.time(next) : Clock.dayAndTime(next, wide: false)
+            return tr("Next stand-up: \(when)", "Наступна перерва: \(when)", "Следующий перерыв: \(when)")
         }
-        return "No stand-ups scheduled"
+        return tr("No stand-ups scheduled", "Перерв не заплановано", "Перерывов не запланировано")
     }
 
     private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
@@ -394,6 +430,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc func menuOpenSettings() { openSettings() }
     @objc func menuOpenAbout() { openSettings(tab: .about) }
 
+    @objc private func menuLanguage(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let language = AppLanguage(rawValue: raw) else { return }
+        store.settings.language = language
+    }
+
     @objc private func menuPause(_ sender: NSMenuItem) {
         if sender.tag < 0 {
             scheduler.pauseUntilTomorrow()
@@ -409,12 +450,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let tab { settingsNavigation.tab = tab }
         if settingsWindow == nil {
             let hosting = NSHostingController(
-                rootView: SettingsView(navigation: settingsNavigation, actions: actions)
+                rootView: SettingsView(navigation: settingsNavigation, actions: actions,
+                                       onHeight: { [weak self] height in self?.fitSettingsWindow(to: height) })
                     .environmentObject(store)
                     .environmentObject(scheduler))
-            let window = NSWindow(contentViewController: hosting)
-            window.title = "StandUp Pal"
-            window.styleMask = [.titled, .closable, .miniaturizable]
+            hosting.sizingOptions = []
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: SettingsView.width, height: 560),
+                                  styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+            window.contentViewController = hosting
+            window.setContentSize(NSSize(width: SettingsView.width, height: 560))
+            window.title = settingsTitle
             window.isReleasedWhenClosed = false
             window.delegate = self
             window.center()
@@ -423,6 +468,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSApp.setActivationPolicy(.regular)
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private var settingsTitle: String {
+        tr("StandUp Pal Settings", "Налаштування StandUp Pal", "Настройки StandUp Pal")
+    }
+
+    /// Sizes the settings window to the visible tab, keeping its top edge in place, so no
+    /// tab ever needs a scroll bar.
+    private func fitSettingsWindow(to height: CGFloat) {
+        guard let window = settingsWindow, height > 0, abs(height - settingsHeight) > 0.5 else { return }
+        let animate = window.isVisible && settingsHeight > 0
+        settingsHeight = height
+        let content = NSRect(x: 0, y: 0, width: SettingsView.width, height: ceil(height))
+        var frame = window.frameRect(forContentRect: content)
+        frame.origin.x = window.frame.minX
+        frame.origin.y = window.frame.maxY - frame.height
+        if let screen = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame, frame.minY < screen.minY {
+            frame.origin.y = max(screen.minY, screen.maxY - frame.height)
+        }
+        window.setFrame(frame, display: true, animate: animate)
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -438,31 +503,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About StandUp Pal", action: #selector(menuOpenAbout), keyEquivalent: "")
-        appMenu.addItem(withTitle: "Settings…", action: #selector(menuOpenSettings), keyEquivalent: ",")
+        appMenu.addItem(withTitle: tr("About StandUp Pal", "Про StandUp Pal", "О StandUp Pal"), action: #selector(menuOpenAbout), keyEquivalent: "")
+        appMenu.addItem(withTitle: tr("Settings…", "Налаштування…", "Настройки…"), action: #selector(menuOpenSettings), keyEquivalent: ",")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Hide StandUp Pal", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Quit StandUp Pal", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: tr("Hide StandUp Pal", "Сховати StandUp Pal", "Скрыть StandUp Pal"),
+                        action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: tr("Quit StandUp Pal", "Вийти з StandUp Pal", "Выйти из StandUp Pal"),
+                        action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         main.addItem(appItem)
 
         let editItem = NSMenuItem()
-        let edit = NSMenu(title: "Edit")
-        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        let redo = edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        let edit = NSMenu(title: tr("Edit", "Правка", "Правка"))
+        edit.addItem(withTitle: tr("Undo", "Скасувати", "Отменить"), action: Selector(("undo:")), keyEquivalent: "z")
+        let redo = edit.addItem(withTitle: tr("Redo", "Повторити", "Повторить"), action: Selector(("redo:")), keyEquivalent: "z")
         redo.keyEquivalentModifierMask = [.command, .shift]
         edit.addItem(.separator())
-        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(withTitle: tr("Cut", "Вирізати", "Вырезать"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: tr("Copy", "Копіювати", "Копировать"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: tr("Paste", "Вставити", "Вставить"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: tr("Select All", "Вибрати все", "Выбрать всё"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editItem.submenu = edit
         main.addItem(editItem)
 
         let windowItem = NSMenuItem()
-        let windowMenu = NSMenu(title: "Window")
-        windowMenu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
-        windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        let windowMenu = NSMenu(title: tr("Window", "Вікно", "Окно"))
+        windowMenu.addItem(withTitle: tr("Close", "Закрити", "Закрыть"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        windowMenu.addItem(withTitle: tr("Minimize", "Згорнути", "Свернуть"), action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         windowItem.submenu = windowMenu
         main.addItem(windowItem)
 
@@ -498,40 +565,47 @@ extension AppDelegate {
             try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
         }
 
+        store.settings.soundEnabled = false
         Task { @MainActor in
-            await wait(1.2)
-            shot(statusItem.button, "0-menu-bar", background: .controlBackgroundColor)
-            showPopover()
-            await wait(1.2)
-            shot(popover.contentViewController?.view, "1-popover")
-            popover.performClose(nil)
-
-            actions.previewStandup()
-            await wait(1.2)
-            shot(reminderPanel.contentView, "2-standup-card")
-            handle(.skip, for: previewOccurrence ?? Occurrence(id: "preview-x", kind: .standup, scheduled: Date(), due: Date(), isPreview: true))
-
-            if let first = store.reminders.first {
-                actions.previewReminder(first)
+            let languages: [AppLanguage] = CommandLine.arguments.contains("--all-languages") ? [.en, .uk, .ru] : [store.settings.language]
+            for language in languages {
+                store.settings.language = language
+                let prefix = languages.count > 1 ? "\(language.rawValue)-" : ""
                 await wait(1.2)
-                shot(reminderPanel.contentView, "3-extra-card")
-                handle(.skip, for: previewOccurrence ?? Occurrence(id: "preview-y", kind: .custom(first.id), scheduled: Date(), due: Date(), isPreview: true))
-            }
+                shot(statusItem.button, "\(prefix)0-menu-bar", background: .controlBackgroundColor)
+                showPopover()
+                await wait(1.2)
+                shot(popover.contentViewController?.view, "\(prefix)1-popover")
+                popover.performClose(nil)
 
-            openWarmUp(nil)
-            await wait(1.2)
-            shot(warmUp.contentView, "4-warmup-get-ready")
-            await wait(3.6)
-            shot(warmUp.contentView, "5-warmup-exercise")
-            warmUp.finishNow()
-            await wait(1.5)
-            shot(warmUp.contentView, "6-warmup-finished")
-            warmUp.close()
+                actions.previewStandup()
+                await wait(1.2)
+                shot(reminderPanel.contentView, "\(prefix)2-standup-card")
+                handle(.skip, for: previewOccurrence ?? Occurrence(id: "preview-x", kind: .standup, scheduled: Date(), due: Date(), isPreview: true))
 
-            for (index, tab) in SettingsTab.allCases.enumerated() {
-                openSettings(tab: tab)
-                await wait(1.0)
-                shot(settingsWindow?.contentView, "7-settings-\(index + 1)-\(tab.rawValue)")
+                if let first = store.reminders.first {
+                    actions.previewReminder(first)
+                    await wait(1.2)
+                    shot(reminderPanel.contentView, "\(prefix)3-extra-card")
+                    handle(.skip, for: previewOccurrence ?? Occurrence(id: "preview-y", kind: .custom(first.id), scheduled: Date(), due: Date(), isPreview: true))
+                }
+
+                openWarmUp(nil)
+                await wait(1.2)
+                shot(warmUp.contentView, "\(prefix)4-warmup-get-ready")
+                await wait(3.6)
+                shot(warmUp.contentView, "\(prefix)5-warmup-exercise")
+                warmUp.finishNow()
+                await wait(1.5)
+                shot(warmUp.contentView, "\(prefix)6-warmup-finished")
+                warmUp.close()
+
+                for (index, tab) in SettingsTab.allCases.enumerated() {
+                    openSettings(tab: tab)
+                    await wait(1.0)
+                    shot(settingsWindow?.contentView, "\(prefix)7-settings-\(index + 1)-\(tab.rawValue)")
+                }
+                settingsWindow?.close()
             }
             await wait(0.5)
             NSApp.terminate(nil)

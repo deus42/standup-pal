@@ -18,9 +18,9 @@ enum WarmUpLength: Int, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .quick: return "Quick · 2 min"
-        case .standard: return "Standard · 3 min"
-        case .full: return "Full · 5 min"
+        case .quick: return tr("Quick · 2 min", "Швидка · 2 хв", "Быстрая · 2 мин")
+        case .standard: return tr("Standard · 3 min", "Звичайна · 3 хв", "Обычная · 3 мин")
+        case .full: return tr("Full · 5 min", "Повна · 5 хв", "Полная · 5 мин")
         }
     }
 }
@@ -32,67 +32,161 @@ enum SoundChoice: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .softChime: return "Soft chime"
-        case .marimba: return "Marimba"
-        case .kalimba: return "Kalimba"
-        case .bubble: return "Bubble pop"
-        case .tink: return "Tink (system)"
-        case .glass: return "Glass (system)"
+        case .softChime: return tr("Soft chime", "М'який дзвін", "Мягкий звон")
+        case .marimba: return tr("Marimba", "Марімба", "Маримба")
+        case .kalimba: return tr("Kalimba", "Калімба", "Калимба")
+        case .bubble: return tr("Bubble pop", "Бульбашка", "Пузырёк")
+        case .tink: return tr("Tink (system)", "Tink (системний)", "Tink (системный)")
+        case .glass: return tr("Glass (system)", "Glass (системний)", "Glass (системный)")
         }
     }
 }
 
 enum PetSpecies: String, Codable, CaseIterable, Identifiable {
-    case blob, kitty, bunny, bear
+    case blob, booty, kitty, bunny, bear, panda, fox, puppy, hamster, penguin, frog, chick, axolotl, dino
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .blob: return "Blob"
-        case .kitty: return "Kitty"
-        case .bunny: return "Bunny"
-        case .bear: return "Bear"
+        case .blob: return tr("Blob", "Блоб", "Блоб")
+        case .booty: return tr("Booty", "Попка", "Попка")
+        case .kitty: return tr("Kitty", "Котик", "Котик")
+        case .bunny: return tr("Bunny", "Зайчик", "Зайка")
+        case .bear: return tr("Bear", "Ведмедик", "Мишка")
+        case .panda: return tr("Panda", "Панда", "Панда")
+        case .fox: return tr("Fox", "Лисичка", "Лисичка")
+        case .puppy: return tr("Puppy", "Цуцик", "Щенок")
+        case .hamster: return tr("Hamster", "Хом'ячок", "Хомяк")
+        case .penguin: return tr("Penguin", "Пінгвін", "Пингвин")
+        case .frog: return tr("Frog", "Жабка", "Лягушка")
+        case .chick: return tr("Chick", "Курча", "Цыплёнок")
+        case .axolotl: return tr("Axolotl", "Аксолотль", "Аксолотль")
+        case .dino: return tr("Dino", "Дино", "Дино")
+        }
+    }
+
+    /// Every pet is a fitness pet with its own sport.
+    var role: String {
+        switch self {
+        case .blob: return tr("Gym buddy", "Напарник", "Напарник")
+        case .booty: return tr("Squat pro", "Профі присідань", "Профи приседаний")
+        case .kitty: return tr("Yoga master", "Майстер йоги", "Мастер йоги")
+        case .bunny: return tr("Sprinter", "Спринтер", "Спринтер")
+        case .bear: return tr("Powerlifter", "Пауерліфтер", "Пауэрлифтер")
+        case .panda: return tr("Kung fu", "Кунг-фу", "Кунг-фу")
+        case .fox: return tr("Trail runner", "Бігун", "Бегун")
+        case .puppy: return tr("Fetch champ", "Чемпіон апорту", "Чемпион апорта")
+        case .hamster: return tr("Wheel runner", "Біг у колесі", "Бег в колесе")
+        case .penguin: return tr("Swimmer", "Плавець", "Пловец")
+        case .frog: return tr("High jumper", "Стрибун", "Прыгун")
+        case .chick: return tr("Coach", "Тренер", "Тренер")
+        case .axolotl: return tr("Aqua aerobics", "Аквааеробіка", "Аквааэробика")
+        case .dino: return tr("Cardio-saurus", "Кардіозавр", "Кардиозавр")
         }
     }
 }
 
-enum PetAccessory: String, Codable, CaseIterable, Identifiable {
-    case none, sprout, sweatband, partyHat, shades, crown
+/// Fitness gear the pet earns by levelling up. Each slot holds one item.
+protocol PetGear: CaseIterable, Identifiable, Equatable {
+    var label: String { get }
+    var unlockLevel: Int { get }
+}
+
+enum HeadGear: String, Codable, PetGear {
+    case none, sweatband, cap, headphones, shades, crown
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .none: return "None"
-        case .sprout: return "Sprout"
-        case .sweatband: return "Sweatband"
-        case .partyHat: return "Party hat"
-        case .shades: return "Cool shades"
-        case .crown: return "Crown"
+        case .none: return tr("None", "Нічого", "Ничего")
+        case .sweatband: return tr("Sweatband", "Пов'язка", "Повязка")
+        case .cap: return tr("Cap", "Кепка", "Кепка")
+        case .headphones: return tr("Headphones", "Навушники", "Наушники")
+        case .shades: return tr("Shades", "Окуляри", "Очки")
+        case .crown: return tr("Crown", "Корона", "Корона")
         }
     }
 
-    var emoji: String {
+    var unlockLevel: Int {
         switch self {
-        case .none: return "✨"
-        case .sprout: return "🌱"
-        case .sweatband: return "🎽"
-        case .partyHat: return "🥳"
-        case .shades: return "😎"
-        case .crown: return "👑"
+        case .none, .sweatband: return 1
+        case .cap: return 3
+        case .headphones: return 6
+        case .shades: return 9
+        case .crown: return 12
+        }
+    }
+}
+
+enum HandGear: String, Codable, PetGear {
+    case none, bottle, dumbbells, kettlebell, trophy
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .none: return tr("None", "Нічого", "Ничего")
+        case .bottle: return tr("Water bottle", "Пляшка води", "Бутылка воды")
+        case .dumbbells: return tr("Dumbbells", "Гантелі", "Гантели")
+        case .kettlebell: return tr("Kettlebell", "Гиря", "Гиря")
+        case .trophy: return tr("Trophy", "Кубок", "Кубок")
         }
     }
 
     var unlockLevel: Int {
         switch self {
         case .none: return 1
-        case .sprout: return 2
-        case .sweatband: return 4
-        case .partyHat: return 6
-        case .shades: return 8
-        case .crown: return 10
+        case .bottle: return 2
+        case .dumbbells: return 5
+        case .kettlebell: return 8
+        case .trophy: return 15
         }
+    }
+}
+
+enum NeckGear: String, Codable, PetGear {
+    case none, towel, whistle, medal
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .none: return tr("None", "Нічого", "Ничего")
+        case .towel: return tr("Towel", "Рушник", "Полотенце")
+        case .whistle: return tr("Whistle", "Свисток", "Свисток")
+        case .medal: return tr("Medal", "Медаль", "Медаль")
+        }
+    }
+
+    var unlockLevel: Int {
+        switch self {
+        case .none: return 1
+        case .towel: return 4
+        case .whistle: return 7
+        case .medal: return 10
+        }
+    }
+}
+
+enum GearCatalog {
+    /// Names of gear that unlock after `oldLevel`, up to and including `newLevel`.
+    static func unlocked(after oldLevel: Int, through newLevel: Int) -> [String] {
+        func pick<G: PetGear>(_ all: [G]) -> [(Int, String)] {
+            all.filter { $0.unlockLevel > oldLevel && $0.unlockLevel <= newLevel }.map { ($0.unlockLevel, $0.label) }
+        }
+        let items = pick(HeadGear.allCases) + pick(HandGear.allCases) + pick(NeckGear.allCases)
+        return items.sorted { $0.0 < $1.0 }.map(\.1)
+    }
+
+    /// The next piece of gear to earn, for "next unlock" hints.
+    static func next(after level: Int) -> (level: Int, label: String)? {
+        var all: [(Int, String)] = []
+        all += HeadGear.allCases.map { ($0.unlockLevel, $0.label) }
+        all += HandGear.allCases.map { ($0.unlockLevel, $0.label) }
+        all += NeckGear.allCases.map { ($0.unlockLevel, $0.label) }
+        return all.filter { $0.0 > level }.min { $0.0 < $1.0 }.map { (level: $0.0, label: $0.1) }
     }
 }
 
@@ -115,6 +209,9 @@ struct AppSettings: Codable, Equatable {
     var renudge = true
     var showCountdown = true
 
+    // Language
+    var language: AppLanguage = .system
+
     // Sound
     var soundEnabled = true
     var soundChoice: SoundChoice = .softChime
@@ -125,7 +222,11 @@ struct AppSettings: Codable, Equatable {
     var petName = "Pip"
     var petSpecies: PetSpecies = .blob
     var petColorHex = "#7ED6B2"
-    var petAccessory: PetAccessory = .none
+    /// The belly and face tone; empty means "a light tint of the body colour".
+    var petBellyHex = ""
+    var petHead: HeadGear = .sweatband
+    var petHands: HandGear = .none
+    var petNeck: NeckGear = .none
 
     // Warm-up
     var warmUpLength: WarmUpLength = .standard
@@ -136,6 +237,10 @@ struct AppSettings: Codable, Equatable {
 }
 
 extension AppSettings {
+    private enum LegacyKeys: String, CodingKey {
+        case petAccessory
+    }
+
     init(from decoder: Decoder) throws {
         self.init()
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -153,6 +258,7 @@ extension AppSettings {
         holdDuringCalls = c.value(.holdDuringCalls, holdDuringCalls)
         renudge = c.value(.renudge, renudge)
         showCountdown = c.value(.showCountdown, showCountdown)
+        language = c.value(.language, language)
         soundEnabled = c.value(.soundEnabled, soundEnabled)
         soundChoice = c.value(.soundChoice, soundChoice)
         volume = c.value(.volume, volume)
@@ -160,7 +266,16 @@ extension AppSettings {
         petName = c.value(.petName, petName)
         petSpecies = c.value(.petSpecies, petSpecies)
         petColorHex = c.value(.petColorHex, petColorHex)
-        petAccessory = c.value(.petAccessory, petAccessory)
+        petBellyHex = c.value(.petBellyHex, petBellyHex)
+        if c.contains(.petHead) {
+            petHead = c.value(.petHead, petHead)
+        } else if let legacy = try? decoder.container(keyedBy: LegacyKeys.self),
+                  let old = HeadGear(rawValue: legacy.value(.petAccessory, "")), old != .none {
+            // v1 had a single accessory; the head-worn ones carry over.
+            petHead = old
+        }
+        petHands = c.value(.petHands, petHands)
+        petNeck = c.value(.petNeck, petNeck)
         warmUpLength = c.value(.warmUpLength, warmUpLength)
         speakExercises = c.value(.speakExercises, speakExercises)
         getReadyCountdown = c.value(.getReadyCountdown, getReadyCountdown)

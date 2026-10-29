@@ -7,7 +7,13 @@ import SwiftUI
 final class AppStore: ObservableObject {
     static let shared = AppStore()
 
-    @Published var settings: AppSettings { didSet { if settings != oldValue { scheduleSave() } } }
+    @Published var settings: AppSettings {
+        didSet {
+            guard settings != oldValue else { return }
+            if settings.language != oldValue.language { applyLanguage() }
+            scheduleSave()
+        }
+    }
     @Published var reminders: [CustomReminder] { didSet { if reminders != oldValue { scheduleSave() } } }
     @Published var pet: PetState { didSet { if pet != oldValue { scheduleSave() } } }
     @Published var stats: [String: DayStats] { didSet { if stats != oldValue { scheduleSave() } } }
@@ -21,6 +27,14 @@ final class AppStore: ObservableObject {
     @Published var showWelcome = false
 
     private var saveWork: DispatchWorkItem?
+    private static let isSnapshotRun = CommandLine.arguments.contains("--snapshot")
+    /// `--snapshot` runs keep their state apart from the real app's.
+    private static let defaults: UserDefaults = {
+        if isSnapshotRun, let suite = UserDefaults(suiteName: "com.deus.standuppal.snapshot") {
+            return suite
+        }
+        return .standard
+    }()
 
     private enum Key {
         static let settings = "settings.v1"
@@ -31,7 +45,9 @@ final class AppStore: ObservableObject {
     }
 
     private init() {
-        settings = Self.load(Key.settings) ?? AppSettings()
+        let settings: AppSettings = Self.load(Key.settings) ?? AppSettings()
+        L10n.lang = settings.language.resolved
+        self.settings = settings
         reminders = Self.load(Key.reminders) ?? CustomReminder.defaults
         pet = Self.load(Key.pet) ?? PetState()
         stats = Self.load(Key.stats) ?? [:]
@@ -41,7 +57,7 @@ final class AppStore: ObservableObject {
     // MARK: Persistence
 
     private static func load<T: Decodable>(_ key: String) -> T? {
-        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        guard let data = defaults.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(T.self, from: data)
     }
 
@@ -59,13 +75,34 @@ final class AppStore: ObservableObject {
         saveWork = nil
         let encoder = JSONEncoder()
         func put<T: Encodable>(_ value: T, _ key: String) {
-            if let data = try? encoder.encode(value) { UserDefaults.standard.set(data, forKey: key) }
+            if let data = try? encoder.encode(value) { Self.defaults.set(data, forKey: key) }
         }
         put(settings, Key.settings)
         put(reminders, Key.reminders)
         put(pet, Key.pet)
         put(stats, Key.stats)
         put(runtime, Key.runtime)
+    }
+
+    /// Switches the UI language and translates default reminder texts with it.
+    private func applyLanguage() {
+        L10n.lang = settings.language.resolved
+        Self.preferSystemStrings(in: settings.language)
+        let translated = reminders.map { $0.relocalized() }
+        if translated != reminders { reminders = translated }
+        toast = nil
+        talkNonce += 1
+    }
+
+    /// System-provided text (the Cancel button, the colour panel) follows the app's
+    /// language from the next launch on.
+    private static func preferSystemStrings(in language: AppLanguage) {
+        guard !isSnapshotRun else { return }
+        if language == .system {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.set([language.rawValue], forKey: "AppleLanguages")
+        }
     }
 
     // MARK: Convenience
@@ -75,6 +112,7 @@ final class AppStore: ObservableObject {
     /// A deeper tone of the pet colour that keeps white text readable.
     var accent: Color { petRGB.darker(0.42).color }
     var petLook: PetLook { PetLook.from(settings) }
+    var petBelly: Color { petLook.belly.color }
 
     var todayKey: String { Clock.dayKey(Date()) }
     var today: DayStats { stats[todayKey] ?? DayStats() }
@@ -101,12 +139,14 @@ final class AppStore: ObservableObject {
         adjustHappiness(delta)
         let newLevel = pet.level
         guard newLevel > oldLevel else { return }
-        let unlocked = PetAccessory.allCases.filter { $0.unlockLevel > oldLevel && $0.unlockLevel <= newLevel }
-        var message = "\(settings.petName) reached level \(newLevel)!"
-        if let accessory = unlocked.last {
-            message += " New look unlocked: \(accessory.emoji) \(accessory.label)."
+        let name = settings.petName
+        var message = tr("\(name) is now level \(newLevel)!", "\(name) тепер на рівні \(newLevel)!", "\(name) теперь на уровне \(newLevel)!")
+        let unlocked = GearCatalog.unlocked(after: oldLevel, through: newLevel)
+        if !unlocked.isEmpty {
+            let list = unlocked.joined(separator: ", ")
+            message += tr(" New gear: \(list).", " Нове спорядження: \(list).", " Новое снаряжение: \(list).")
         }
-        toast = Toast(title: "Level up! 🎉", message: message)
+        toast = Toast(title: tr("Level up! 🎉", "Новий рівень! 🎉", "Новый уровень! 🎉"), message: message)
         SoundPlayer.shared.play(.levelUp)
     }
 
@@ -130,7 +170,9 @@ final class AppStore: ObservableObject {
     func resetProgress() {
         pet = PetState()
         stats = [:]
-        settings.petAccessory = .none
+        settings.petHead = .sweatband
+        settings.petHands = .none
+        settings.petNeck = .none
         react(.happy, for: 3)
     }
 }

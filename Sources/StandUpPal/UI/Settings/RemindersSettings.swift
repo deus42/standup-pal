@@ -6,44 +6,31 @@ struct RemindersSettings: View {
     @ViewState private var selection: UUID?
 
     var body: some View {
-        HStack(spacing: 0) {
-            VStack(spacing: 0) {
-                List(selection: $selection) {
-                    ForEach(store.reminders) { reminder in
-                        HStack(spacing: 8) {
-                            Toggle("", isOn: enabledBinding(reminder.id))
-                                .labelsHidden()
-                                .toggleStyle(.checkbox)
-                            Text(reminder.emoji).font(.system(size: 18))
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(reminder.title).lineLimit(1)
-                                Text(reminder.scheduleSummary)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        .padding(.vertical, 3)
-                        .opacity(reminder.isEnabled ? 1 : 0.55)
-                        .tag(reminder.id)
+        HStack(alignment: .top, spacing: 18) {
+            VStack(alignment: .leading, spacing: 10) {
+                SettingsGroup(title: tr("Your reminders", "Твої нагадування", "Твои напоминания"),
+                              footer: tr("Up to \(CustomReminder.maxCount). The tick turns one on or off.",
+                                         "До \(CustomReminder.maxCount) штук. Галочка вмикає чи вимикає.",
+                                         "До \(CustomReminder.maxCount) штук. Галочка включает или выключает.")) {
+                    if store.reminders.isEmpty {
+                        Text(tr("No reminders yet.", "Ще немає нагадувань.", "Пока нет напоминаний."))
+                            .foregroundStyle(.secondary)
+                            .padding(14)
+                            .frame(maxWidth: .infinity)
+                    }
+                    ForEach(Array(store.reminders.enumerated()), id: \.element.id) { index, reminder in
+                        row(reminder, last: index == store.reminders.count - 1)
                     }
                 }
-                .listStyle(.sidebar)
-                Divider()
-                HStack(spacing: 4) {
-                    Button { add() } label: { Image(systemName: "plus").frame(width: 22, height: 20) }
-                        .help("Add a reminder")
-                    Button { remove() } label: { Image(systemName: "minus").frame(width: 22, height: 20) }
+                HStack(spacing: 8) {
+                    Button { add() } label: { Label(tr("Add", "Додати", "Добавить"), systemImage: "plus") }
+                        .disabled(store.reminders.count >= CustomReminder.maxCount)
+                    Button { remove() } label: { Label(tr("Delete", "Видалити", "Удалить"), systemImage: "trash") }
                         .disabled(selection == nil)
-                        .help("Delete the selected reminder")
-                    Spacer()
                 }
-                .buttonStyle(.borderless)
-                .padding(6)
+                .buttonStyle(PillButtonStyle(compact: true))
             }
-            .frame(width: 240)
-
-            Divider()
+            .frame(width: 250)
 
             if let id = selection, let binding = reminderBinding(id) {
                 ReminderEditor(reminder: binding, tint: store.accent) {
@@ -51,21 +38,53 @@ struct RemindersSettings: View {
                 }
                 .id(id)
             } else {
-                VStack(spacing: 10) {
+                VStack(spacing: 12) {
                     Text("🗓️").font(.system(size: 44))
-                    Text("Extra reminders for push-ups, water, walks… anything.")
+                    Text(tr("Extra reminders for push-ups, water, walks… anything.",
+                            "Додаткові нагадування: віджимання, вода, прогулянки… що завгодно.",
+                            "Дополнительные напоминания: отжимания, вода, прогулки… что угодно."))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
-                    Button("Add a reminder") { add() }
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button(tr("Add a reminder", "Додати нагадування", "Добавить напоминание")) { add() }
                         .buttonStyle(PillButtonStyle(prominent: true, tint: store.accent))
                         .fixedSize()
                 }
                 .padding(30)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 300)
             }
         }
         .onAppear {
             if selection == nil { selection = store.reminders.first?.id }
+        }
+    }
+
+    private func row(_ reminder: CustomReminder, last: Bool) -> some View {
+        let selected = selection == reminder.id
+        return VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Toggle("", isOn: enabledBinding(reminder.id))
+                    .labelsHidden()
+                    .toggleStyle(.checkbox)
+                Text(reminder.emoji).font(.system(size: 18))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(reminder.title).font(.system(size: 13, weight: selected ? .semibold : .regular)).lineLimit(1)
+                    Text(reminder.scheduleSummary)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(selected ? store.petColor.opacity(0.28) : Color.clear)
+                .padding(3))
+            .opacity(reminder.isEnabled ? 1 : 0.55)
+            .contentShape(Rectangle())
+            .onTapGesture { selection = reminder.id }
+            if !last { Divider().padding(.leading, 10) }
         }
     }
 
@@ -89,11 +108,8 @@ struct RemindersSettings: View {
     }
 
     private func add() {
-        var reminder = CustomReminder()
-        reminder.title = "Squats"
-        reminder.emoji = "🦵"
-        reminder.note = "10 slow ones. You've got this."
-        reminder.times = [15 * 60 + 30]
+        guard store.reminders.count < CustomReminder.maxCount else { return }
+        let reminder = CustomReminder.suggestion
         store.reminders.append(reminder)
         selection = reminder.id
     }
@@ -115,78 +131,118 @@ struct ReminderEditor: View {
     private let emojiChoices = ["💪", "🦵", "💧", "🚶", "🧘", "👀", "🤸", "🍎", "🫁", "☕️", "🪴", "📵"]
 
     var body: some View {
-        Form {
-            Section {
-                TextField("Title", text: $reminder.title)
-                TextField("Emoji", text: $reminder.emoji)
-                HStack(spacing: 0) {
-                    ForEach(emojiChoices, id: \.self) { emoji in
-                        Button { reminder.emoji = emoji } label: {
-                            Text(emoji)
-                                .font(.system(size: 16))
-                                .frame(maxWidth: .infinity, minHeight: 26)
-                                .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .fill(reminder.emoji == emoji ? tint.opacity(0.3) : Color.clear))
-                                .contentShape(Rectangle())
+        VStack(spacing: 14) {
+            SettingsGroup(title: tr("Reminder", "Нагадування", "Напоминание")) {
+                SettingsRow(title: tr("Title", "Назва", "Название")) {
+                    TextField("", text: $reminder.title).textFieldStyle(.roundedBorder).frame(width: 220)
+                }
+                SettingsRow(title: tr("Note", "Примітка", "Заметка")) {
+                    TextField("", text: $reminder.note, prompt: Text(tr("Optional", "Необов'язково", "Необязательно")))
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 220)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(tr("Emoji", "Емодзі", "Эмодзи")).font(.system(size: 13))
+                        Spacer()
+                        TextField("", text: $reminder.emoji)
+                            .textFieldStyle(.roundedBorder)
+                            .multilineTextAlignment(.center)
+                            .frame(width: 48)
+                    }
+                    HStack(spacing: 2) {
+                        ForEach(emojiChoices, id: \.self) { emoji in
+                            Button { reminder.emoji = emoji } label: {
+                                Text(emoji)
+                                    .font(.system(size: 16))
+                                    .frame(maxWidth: .infinity, minHeight: 28)
+                                    .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .fill(reminder.emoji == emoji ? tint.opacity(0.3) : Color.primary.opacity(0.03)))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
-                TextField("Note", text: $reminder.note, prompt: Text("Optional, shown on the card"))
-                Toggle("Enabled", isOn: $reminder.isEnabled)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                Divider().padding(.leading, 12)
+                SettingsToggle(title: tr("Enabled", "Увімкнено", "Включено"), isOn: $reminder.isEnabled, divider: false)
             }
 
-            Section("Schedule") {
-                Picker("Repeat", selection: $reminder.mode) {
-                    Text("At set times").tag(CustomReminder.Mode.times)
-                    Text("Every few hours").tag(CustomReminder.Mode.interval)
+            SettingsGroup(title: tr("Schedule", "Розклад", "Расписание"),
+                          footer: tr("When it pops up you can mark it done, skip it, or push it back by 1 or 2 hours.",
+                                     "Коли воно з'явиться, можна натиснути «Готово», пропустити або відкласти на 1–2 години.",
+                                     "Когда оно появится, можно нажать «Готово», пропустить или отложить на 1–2 часа.")) {
+                Picker("", selection: $reminder.mode) {
+                    Text(tr("At set times", "У певний час", "В определённое время")).tag(CustomReminder.Mode.times)
+                    Text(tr("Every few hours", "Кожні кілька годин", "Каждые несколько часов")).tag(CustomReminder.Mode.interval)
                 }
+                .labelsHidden()
                 .pickerStyle(.segmented)
+                .padding(10)
+                Divider().padding(.leading, 12)
 
                 if reminder.mode == .times {
                     ForEach(Array(reminder.times.enumerated()), id: \.offset) { index, _ in
-                        HStack {
-                            DatePicker("Time \(index + 1)", selection: minuteBinding(timeBinding(index)), displayedComponents: .hourAndMinute)
-                            Button {
-                                if reminder.times.indices.contains(index) { reminder.times.remove(at: index) }
-                            } label: {
-                                Image(systemName: "minus.circle.fill").foregroundStyle(.secondary)
+                        SettingsRow(title: tr("Time \(index + 1)", "Час \(index + 1)", "Время \(index + 1)")) {
+                            HStack(spacing: 8) {
+                                TimeField(minutes: timeBinding(index))
+                                Button {
+                                    if reminder.times.indices.contains(index) { reminder.times.remove(at: index) }
+                                } label: {
+                                    Image(systemName: "minus.circle.fill").foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.borderless)
+                                .disabled(reminder.times.count <= 1)
                             }
-                            .buttonStyle(.borderless)
-                            .disabled(reminder.times.count <= 1)
                         }
                     }
-                    Button {
-                        let last = reminder.times.max() ?? 10 * 60
-                        reminder.times.append(min(last + 60, 23 * 60 + 30))
-                    } label: {
-                        Label("Add a time", systemImage: "plus.circle.fill")
+                    HStack {
+                        Button {
+                            let last = reminder.times.max() ?? 10 * 60
+                            reminder.times.append(min(last + 60, 23 * 60 + 30))
+                        } label: {
+                            Label(tr("Add a time", "Додати час", "Добавить время"), systemImage: "plus.circle.fill")
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(reminder.times.count >= CustomReminder.maxTimes)
+                        Spacer()
                     }
-                    .buttonStyle(.borderless)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    Divider().padding(.leading, 12)
                 } else {
-                    Picker("Every", selection: $reminder.intervalMinutes) {
-                        ForEach([30, 45, 60, 90, 120, 180, 240], id: \.self) { Text(Clock.durationLabel($0)).tag($0) }
+                    SettingsRow(title: tr("Repeat", "Повтор", "Повтор")) {
+                        Picker("", selection: $reminder.intervalMinutes) {
+                            ForEach([30, 45, 60, 90, 120, 180, 240], id: \.self) { Text(Clock.everyLabel($0)).tag($0) }
+                        }
+                        .labelsHidden()
+                        .fixedSize()
                     }
-                    DatePicker("From", selection: minuteBinding($reminder.startMinute), displayedComponents: .hourAndMinute)
-                    DatePicker("Until", selection: minuteBinding($reminder.endMinute), displayedComponents: .hourAndMinute)
+                    SettingsRow(title: tr("From", "З", "С")) { TimeField(minutes: $reminder.startMinute) }
+                    SettingsRow(title: tr("Until", "До", "До")) { TimeField(minutes: $reminder.endMinute) }
                 }
-                LabeledContent("Days") {
-                    WeekdayPicker(selection: $reminder.weekdays, tint: tint)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(tr("Days", "Дні", "Дни")).font(.system(size: 13))
+                    WeekdayPicker(selection: $reminder.weekdays, tint: tint, dayWidth: 40)
                 }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Section {
-                HStack {
-                    Button("Show it now") { onPreview() }
-                    Spacer()
-                    Text(reminder.scheduleSummary).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                }
-            } footer: {
-                Text("When it pops up you can mark it done, skip it, or push it back by 1 or 2 hours.")
+            HStack(spacing: 10) {
+                Button(tr("Show it now", "Показати зараз", "Показать сейчас")) { onPreview() }
+                    .buttonStyle(PillButtonStyle(compact: true))
+                    .fixedSize()
+                Text(reminder.scheduleSummary)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
             }
         }
-        .formStyle(.grouped)
     }
 
     private func timeBinding(_ index: Int) -> Binding<Int> {

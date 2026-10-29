@@ -277,8 +277,12 @@ final class Scheduler: ObservableObject {
         if today.standupsDone >= store.settings.dailyGoal, store.runtime.goalToastDay != store.todayKey {
             store.runtime.goalToastDay = store.todayKey
             if store.toast == nil {
-                store.toast = Toast(title: "Daily goal reached! 🏆",
-                                    message: "\(today.standupsDone) stand-ups today. \(store.settings.petName) is beaming.")
+                let name = store.settings.petName
+                let count = Words.breaks(today.standupsDone)
+                store.toast = Toast(title: tr("Daily goal reached! 🏆", "Денну мету виконано! 🏆", "Дневная цель выполнена! 🏆"),
+                                    message: tr("\(count) today. \(name) is beaming.",
+                                                "Сьогодні на рахунку \(count). \(name) сяє від гордості.",
+                                                "Сегодня на счету \(count). \(name) сияет от гордости."))
             }
         }
         store.pet.bestStreak = max(store.pet.bestStreak, store.currentStreak())

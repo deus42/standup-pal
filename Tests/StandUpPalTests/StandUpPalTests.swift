@@ -138,7 +138,11 @@ struct ModelTests {
 
     @Test func settingsRoundTrip() throws {
         var s = AppSettings()
-        s.petSpecies = .bunny
+        s.petSpecies = .booty
+        s.petHands = .dumbbells
+        s.petNeck = .medal
+        s.petBellyHex = "#FFD677"
+        s.language = .uk
         s.workDays = [2, 4, 6]
         s.customExercises = [Exercise(id: "custom-1", name: "Lunges", emoji: "🦵", instructions: "Alternate legs.", seconds: 40, isCustom: true)]
         let data = try JSONEncoder().encode(s)
@@ -170,11 +174,85 @@ struct ModelTests {
     }
 
     @Test func countdownLabels() {
-        #expect(Clock.shortCountdown(30) == "<1m")
-        #expect(Clock.shortCountdown(60) == "1m")
-        #expect(Clock.shortCountdown(61) == "2m")
-        #expect(Clock.shortCountdown(3600) == "1h 00m")
+        #expect(Clock.shortCountdown(30, in: .en) == "<1m")
+        #expect(Clock.shortCountdown(60, in: .en) == "1m")
+        #expect(Clock.shortCountdown(61, in: .en) == "2m")
+        #expect(Clock.shortCountdown(3600, in: .en) == "1h 00m")
+        #expect(Clock.shortCountdown(720, in: .uk) == "12 хв")
+        #expect(Clock.shortCountdown(3900, in: .ru) == "1 ч 05 мин")
         #expect(Clock.mmss(29.2) == "0:30")
+    }
+
+    @Test func settingsFromVersionOneKeepTheirHeadAccessory() throws {
+        let crown = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"petAccessory":"crown"}"#.utf8))
+        #expect(crown.petHead == .crown)
+        let partyHat = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"petAccessory":"partyHat"}"#.utf8))
+        #expect(partyHat.petHead == .sweatband)
+        let explicit = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"petAccessory":"crown","petHead":"cap"}"#.utf8))
+        #expect(explicit.petHead == .cap)
+    }
+
+    @Test func palettesAreDistinctAndValid() {
+        let all = PetPalette.all
+        #expect(all.count >= 28)
+        #expect(Set(all.map(\.id)).count == all.count)
+        #expect(Set(all.map { $0.body.uppercased() }).count == all.count)
+        for palette in all {
+            #expect(RGB(hex: palette.body).hex == palette.body.uppercased())
+            #expect(RGB(hex: palette.belly).luminance > RGB(hex: palette.body).luminance - 0.05)
+            #expect(palette.name != palette.id)
+        }
+    }
+
+    @Test func gearUnlocksInOrderAndStartsWithTheSweatband() {
+        #expect(HeadGear.sweatband.unlockLevel == 1)
+        #expect(AppSettings().petHead == .sweatband)
+        #expect(GearCatalog.unlocked(after: 1, through: 1).isEmpty)
+        #expect(GearCatalog.unlocked(after: 1, through: 3).count == 2)
+        #expect(GearCatalog.next(after: 1)?.level == 2)
+        #expect(GearCatalog.next(after: 99) == nil)
+        let levels = HeadGear.allCases.map(\.unlockLevel) + HandGear.allCases.map(\.unlockLevel) + NeckGear.allCases.map(\.unlockLevel)
+        #expect(levels.filter { $0 > 1 }.count == Set(levels.filter { $0 > 1 }).count)
+    }
+}
+
+@Suite("Languages")
+struct LanguageTests {
+    @Test(arguments: [(1, 0), (2, 1), (4, 1), (5, 2), (11, 2), (12, 2), (21, 0), (22, 1), (25, 2), (111, 2), (102, 1)])
+    func slavicPluralForms(n: Int, index: Int) {
+        #expect(Plural.slavicIndex(n) == index)
+    }
+
+    @Test func countedWordsReadNaturally() {
+        #expect(Words.breaks(1, in: .en) == "1 stand-up")
+        #expect(Words.breaks(6, in: .en) == "6 stand-ups")
+        #expect(Words.breaks(1, in: .uk) == "1 перерва")
+        #expect(Words.breaks(3, in: .uk) == "3 перерви")
+        #expect(Words.breaks(6, in: .uk) == "6 перерв")
+        #expect(Words.breaks(2, in: .ru) == "2 перерыва")
+        #expect(Words.breaks(5, in: .ru) == "5 перерывов")
+        #expect(Words.days(21, in: .uk) == "21 день")
+        #expect(Clock.durationLabel(90, in: .uk) == "1,5 години")
+        #expect(Clock.durationLabel(120, in: .ru) == "2 часа")
+        #expect(Clock.everyLabel(60, in: .uk) == "Щогодини")
+        #expect(Clock.everyLabel(120, in: .en) == "Every 2 hours")
+        #expect(Clock.everyLabel(30, in: .ru) == "Каждые 30 мин")
+    }
+
+    @Test func eachLanguageGetsItsOwnText() {
+        let texts = Lang.allCases.map { tr("Settings", "Налаштування", "Настройки", in: $0) }
+        #expect(texts == ["Settings", "Налаштування", "Настройки"])
+        #expect(AppLanguage.uk.resolved == .uk)
+        #expect(AppLanguage.ru.resolved == .ru)
+    }
+
+    @Test func defaultRemindersFollowALanguageSwitchButCustomTitlesStay() {
+        let pushUps = CustomReminder(title: "10 віджимань", note: "З колін — теж зараховується.")
+        let renamed = CustomReminder(title: "Plank", note: "My own note")
+        #expect(pushUps.relocalized(in: .ru).title == "10 отжиманий")
+        #expect(pushUps.relocalized(in: .ru).note == "С колен — тоже засчитывается.")
+        #expect(pushUps.relocalized(in: .en).title == "10 push-ups")
+        #expect(renamed.relocalized(in: .uk) == renamed)
     }
 }
 

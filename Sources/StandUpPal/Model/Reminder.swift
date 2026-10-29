@@ -36,21 +36,53 @@ struct CustomReminder: Codable, Identifiable, Equatable {
         switch mode {
         case .times:
             let list = minutes.map { Clock.time(minute: $0) }.joined(separator: ", ")
-            return list.isEmpty ? "No times set" : "\(list) · \(days)"
+            return list.isEmpty ? tr("No times set", "Час не задано", "Время не задано") : "\(list) · \(days)"
         case .interval:
-            return "Every \(Clock.durationLabel(intervalMinutes)), \(Clock.time(minute: startMinute))–\(Clock.time(minute: endMinute)) · \(days)"
+            return "\(Clock.everyLabel(intervalMinutes)), \(Clock.time(minute: startMinute))–\(Clock.time(minute: endMinute)) · \(days)"
         }
     }
 
+    static let maxCount = 8
+    static let maxTimes = 6
+
+    // Default texts are kept in all three languages so a later language switch can
+    // translate reminders the user hasn't renamed.
+    private static let templates: [(title: Phrase, note: Phrase)] = [
+        (Phrase(en: "10 push-ups", uk: "10 віджимань", ru: "10 отжиманий"),
+         Phrase(en: "Knees on the floor totally counts.", uk: "З колін — теж зараховується.", ru: "С колен — тоже засчитывается.")),
+        (Phrase(en: "Drink some water", uk: "Випий води", ru: "Выпей воды"),
+         Phrase(en: "A full glass, nice and slow.", uk: "Повну склянку, не поспішаючи.", ru: "Полный стакан, не спеша.")),
+        (Phrase(en: "Take a short walk", uk: "Коротка прогулянка", ru: "Короткая прогулка"),
+         Phrase(en: "Five minutes around the block or the office.", uk: "П'ять хвилин навколо будинку чи офісу.",
+                ru: "Пять минут вокруг дома или офиса.")),
+        (Phrase(en: "Squats", uk: "Присідання", ru: "Приседания"),
+         Phrase(en: "10 slow ones. You've got this.", uk: "10 повільних. Ти зможеш.", ru: "10 медленных. У тебя получится.")),
+    ]
+
     static var defaults: [CustomReminder] {
         [
-            CustomReminder(title: "10 push-ups", emoji: "💪", note: "Knees on the floor totally counts.",
+            CustomReminder(title: templates[0].title.current, emoji: "💪", note: templates[0].note.current,
                            isEnabled: true, mode: .times, times: [11 * 60 + 30, 16 * 60 + 30]),
-            CustomReminder(title: "Drink some water", emoji: "💧", note: "A full glass, nice and slow.",
+            CustomReminder(title: templates[1].title.current, emoji: "💧", note: templates[1].note.current,
                            isEnabled: false, mode: .interval, intervalMinutes: 120, startMinute: 10 * 60, endMinute: 18 * 60),
-            CustomReminder(title: "Take a short walk", emoji: "🚶", note: "Five minutes around the block or the office.",
+            CustomReminder(title: templates[2].title.current, emoji: "🚶", note: templates[2].note.current,
                            isEnabled: false, mode: .times, times: [14 * 60 + 30]),
         ]
+    }
+
+    /// What the "+" button adds.
+    static var suggestion: CustomReminder {
+        CustomReminder(title: templates[3].title.current, emoji: "🦵", note: templates[3].note.current, times: [15 * 60 + 30])
+    }
+
+    /// Default titles and notes in the current language; anything the user typed stays.
+    func relocalized(in lang: Lang = L10n.lang) -> CustomReminder {
+        var copy = self
+        for template in Self.templates {
+            if template.title.matches(title) { copy.title = template.title.text(in: lang) }
+            if template.note.matches(note) { copy.note = template.note.text(in: lang) }
+        }
+        return copy
     }
 }
 

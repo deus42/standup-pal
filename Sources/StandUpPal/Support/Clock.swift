@@ -11,12 +11,29 @@ enum Clock {
         return f
     }()
 
-    private static let timeFormatter: DateFormatter = {
+    nonisolated(unsafe) private static var cachedTimeFormatter: DateFormatter?
+    nonisolated(unsafe) private static var cachedSymbols: [String]?
+
+    /// English keeps the user's own 12/24-hour preference; Ukrainian and Russian use 24 hours.
+    private static var timeFormatter: DateFormatter {
+        if let cachedTimeFormatter { return cachedTimeFormatter }
         let f = DateFormatter()
-        f.dateStyle = .none
-        f.timeStyle = .short
+        if L10n.lang == .en {
+            f.locale = L10n.locale
+            f.dateStyle = .none
+            f.timeStyle = .short
+        } else {
+            f.locale = L10n.locale
+            f.dateFormat = "HH:mm"
+        }
+        cachedTimeFormatter = f
         return f
-    }()
+    }
+
+    static func languageDidChange() {
+        cachedTimeFormatter = nil
+        cachedSymbols = nil
+    }
 
     static func minuteOfDay(_ date: Date) -> Int {
         let c = calendar.dateComponents([.hour, .minute], from: date)
@@ -36,24 +53,42 @@ enum Clock {
     static func time(_ date: Date) -> String { timeFormatter.string(from: date) }
     static func time(minute: Int) -> String { time(date(on: Date(), minute: minute)) }
 
+    /// "Friday 09:55" for dates beyond today.
+    static func dayAndTime(_ date: Date, wide: Bool = true) -> String {
+        let f = DateFormatter()
+        f.locale = L10n.locale
+        f.setLocalizedDateFormatFromTemplate(wide ? "EEEE" : "EEE")
+        return "\(f.string(from: date).capitalized(with: L10n.locale)) \(time(date))"
+    }
+
     /// Compact countdown for the menu bar: "<1m", "12m", "1h 05m".
-    static func shortCountdown(_ seconds: TimeInterval) -> String {
-        if seconds < 60 { return "<1m" }
+    static func shortCountdown(_ seconds: TimeInterval, in lang: Lang = L10n.lang) -> String {
         let m = Int((seconds / 60).rounded(.up))
-        if m < 60 { return "\(m)m" }
-        return "\(m / 60)h \(String(format: "%02d", m % 60))m"
+        switch lang {
+        case .en:
+            if seconds < 60 { return "<1m" }
+            if m < 60 { return "\(m)m" }
+            return "\(m / 60)h \(String(format: "%02d", m % 60))m"
+        case .uk, .ru:
+            let min = tr("", "хв", "мин", in: lang)
+            let hour = tr("", "год", "ч", in: lang)
+            if seconds < 60 { return "<1 \(min)" }
+            if m < 60 { return "\(m) \(min)" }
+            return "\(m / 60) \(hour) \(String(format: "%02d", m % 60)) \(min)"
+        }
     }
 
     /// "4 min", "1 h 20 min".
-    static func minutesLabel(_ seconds: TimeInterval) -> String {
+    static func minutesLabel(_ seconds: TimeInterval, in lang: Lang = L10n.lang) -> String {
         let m = max(1, Int((seconds / 60).rounded(.up)))
-        if m < 60 { return "\(m) min" }
+        if m < 60 { return Words.minutes(m, in: lang) }
         let h = m / 60, r = m % 60
-        return r == 0 ? "\(h) h" : "\(h) h \(r) min"
+        return r == 0 ? Words.hoursShort(h, in: lang) : "\(Words.hoursShort(h, in: lang)) \(Words.minutes(r, in: lang))"
     }
 
     static func relative(_ seconds: TimeInterval) -> String {
-        seconds <= 0 ? "now" : "in \(minutesLabel(seconds))"
+        if seconds <= 0 { return tr("now", "зараз", "сейчас") }
+        return tr("in \(minutesLabel(seconds))", "через \(minutesLabel(seconds))", "через \(minutesLabel(seconds))")
     }
 
     static func mmss(_ seconds: Double) -> String {
@@ -61,31 +96,56 @@ enum Clock {
         return String(format: "%d:%02d", s / 60, s % 60)
     }
 
-    static func durationLabel(_ minutes: Int) -> String {
-        if minutes < 60 { return "\(minutes) min" }
-        if minutes % 60 == 0 {
-            let h = minutes / 60
-            return h == 1 ? "1 hour" : "\(h) hours"
+    /// "30 min", "1 hour", "1.5 hours".
+    static func durationLabel(_ minutes: Int, in lang: Lang = L10n.lang) -> String {
+        if minutes < 60 { return Words.minutes(minutes, in: lang) }
+        if minutes % 60 == 0 { return Words.hours(minutes / 60, in: lang) }
+        let value = Double(minutes) / 60
+        switch lang {
+        case .en: return String(format: "%.1f hours", value)
+        case .uk: return String(format: "%.1f години", value).replacingOccurrences(of: ".", with: ",")
+        case .ru: return String(format: "%.1f часа", value).replacingOccurrences(of: ".", with: ",")
         }
-        return String(format: "%.1f hours", Double(minutes) / 60)
     }
 
-    /// Weekdays (1 = Sunday … 7 = Saturday) in the user's locale order.
+    /// "Every hour", "Every 2 hours", "Кожні 30 хв".
+    static func everyLabel(_ minutes: Int, in lang: Lang = L10n.lang) -> String {
+        if minutes == 60 { return tr("Every hour", "Щогодини", "Каждый час", in: lang) }
+        let amount: String
+        if minutes < 60 {
+            amount = Words.minutes(minutes, in: lang)
+        } else if minutes % 60 == 0 {
+            amount = lang == .en ? Words.hours(minutes / 60, in: lang) : Words.hoursShort(minutes / 60, in: lang)
+        } else {
+            amount = durationLabel(minutes, in: lang)
+        }
+        return tr("Every \(amount)", "Кожні \(amount)", "Каждые \(amount)", in: lang)
+    }
+
+    /// Weekdays (1 = Sunday … 7 = Saturday) in the user's own week order.
     static var orderedWeekdays: [Int] {
         let first = calendar.firstWeekday
         return (0..<7).map { (first - 1 + $0) % 7 + 1 }
     }
 
     static func shortWeekdaySymbol(_ weekday: Int) -> String {
-        let symbols = calendar.shortWeekdaySymbols
+        let symbols: [String]
+        if let cachedSymbols {
+            symbols = cachedSymbols
+        } else {
+            var localized = Calendar(identifier: .gregorian)
+            localized.locale = L10n.locale
+            symbols = localized.shortWeekdaySymbols.map { $0.replacingOccurrences(of: ".", with: "").capitalized(with: L10n.locale) }
+            cachedSymbols = symbols
+        }
         return symbols[(weekday - 1 + symbols.count) % symbols.count]
     }
 
     static func daysSummary(_ days: Set<Int>) -> String {
-        if days.count == 7 { return "Every day" }
-        if days.isEmpty { return "Never" }
-        if days == [2, 3, 4, 5, 6] { return "Weekdays" }
-        if days == [1, 7] { return "Weekends" }
+        if days.count == 7 { return tr("Every day", "Щодня", "Каждый день") }
+        if days.isEmpty { return tr("Never", "Ніколи", "Никогда") }
+        if days == [2, 3, 4, 5, 6] { return tr("Weekdays", "Будні", "Будни") }
+        if days == [1, 7] { return tr("Weekends", "Вихідні", "Выходные") }
         return orderedWeekdays.filter { days.contains($0) }.map { shortWeekdaySymbol($0) }.joined(separator: " ")
     }
 }

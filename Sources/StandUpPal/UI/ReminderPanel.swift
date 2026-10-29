@@ -136,7 +136,8 @@ struct ReminderCardView: View {
             .padding(.trailing, 10)
         }
         .padding(16)
-        .frame(width: 410, alignment: .leading)
+        .frame(width: 430, alignment: .leading)
+        .environment(\.locale, L10n.locale)
         .overlay(alignment: .topTrailing) {
             Button { onAction(.skip) } label: {
                 Image(systemName: "xmark")
@@ -147,7 +148,7 @@ struct ReminderCardView: View {
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
             .padding(10)
-            .help("Skip")
+            .help(tr("Skip", "Пропустити", "Пропустить"))
         }
         .offset(y: bounce ? -7 : 0)
         .onChange(of: nudger.count) { _, _ in
@@ -181,25 +182,36 @@ struct ReminderCardView: View {
         if let reminder {
             return "\(reminder.emoji) \(reminder.title)"
         }
-        return store.settings.petEnabled ? "\(name) says: stand up!" : "Time to stand up"
+        return store.settings.petEnabled
+            ? tr("\(name) says: stand up!", "\(name) каже: час встати!", "\(name) говорит: пора встать!")
+            : tr("Time to stand up", "Час встати", "Пора встать")
     }
 
     private var subtitle: String {
         if let reminder {
             if !reminder.note.isEmpty { return reminder.note }
-            return occurrence.snoozeCount > 0 ? "Back again, as promised. Ready now?" : "Little extras add up. Got a minute?"
+            return occurrence.snoozeCount > 0
+                ? tr("Back again, as agreed. Ready now?", "Знову тут, як домовлялися. Тепер можна?", "Снова тут, как договаривались. Теперь можно?")
+                : tr("Little extras add up. Got a minute?", "Маленькі звички складаються у велике. Є хвилинка?",
+                     "Маленькие привычки складываются в большое. Есть минутка?")
         }
-        if occurrence.snoozeCount >= 2 {
-            return "Snoozed \(occurrence.snoozeCount)×. Your legs are filing a complaint."
+        let count = occurrence.snoozeCount
+        if count >= 2 {
+            return tr("Snoozed \(count)×. Your legs are filing a complaint.", "Відкладено \(count)×. Ноги вже пишуть скаргу.",
+                      "Отложено \(count)×. Ноги уже пишут жалобу.")
         }
-        if occurrence.snoozeCount == 1 {
-            return "Five more minutes are up. Let's do this!"
+        if count == 1 {
+            return tr("Snooze is over. Let's do this!", "Відкладений час минув. Вперед!", "Отложенное время вышло. Вперёд!")
         }
         let lines = [
-            "The hour's almost up. Perfect moment for a quick warm-up.",
-            "Your chair could use a break from you. Let's stretch!",
-            "Up, up, up! A few minutes of moving and you're back.",
-            "Stand-up o'clock! Unfold, reach, wiggle.",
+            tr("The hour's almost up. Perfect moment for a quick warm-up.", "Година майже минула. Ідеальний момент для розминки.",
+               "Час почти прошёл. Идеальный момент для разминки."),
+            tr("Your chair could use a break from you. Let's stretch!", "Стілець теж хоче відпочити від тебе. Потягнімося!",
+               "Стул тоже хочет отдохнуть от тебя. Потянемся!"),
+            tr("Up, up, up! A few minutes of moving and you're back.", "Вгору, вгору! Кілька хвилин руху — і назад до справ.",
+               "Вверх, вверх! Пара минут движения — и обратно к делам."),
+            tr("Stand-up o'clock! Unfold, reach, wiggle.", "Час вставати! Розпрямися, потягнися, поворушися.",
+               "Время вставать! Распрямись, потянись, пошевелись."),
         ]
         return lines[lineSeed % lines.count]
     }
@@ -210,27 +222,28 @@ struct ReminderCardView: View {
         if occurrence.isStandup {
             VStack(alignment: .leading, spacing: 6) {
                 Button { onAction(.warmUp) } label: {
-                    Label("Start \(minutes)-min warm-up", systemImage: "figure.cooldown")
+                    Label(tr("Start \(minutes)-min warm-up", "Почати розминку · \(minutes) хв", "Начать разминку · \(minutes) мин"),
+                          systemImage: "figure.cooldown")
                 }
                 .buttonStyle(PillButtonStyle(prominent: true, tint: store.accent))
                 HStack(spacing: 6) {
-                    Button { onAction(.stoodUp) } label: { Label("Stood up", systemImage: "checkmark") }
+                    Button { onAction(.stoodUp) } label: { Label(tr("Stood up", "Уже стою", "Уже стою"), systemImage: "checkmark") }
                     if occurrence.snoozeCount < 3 {
                         let snooze = store.settings.snoozeMinutes
-                        Button { onAction(.snooze(snooze)) } label: { Label("\(snooze) min", systemImage: "moon.zzz") }
+                        Button { onAction(.snooze(snooze)) } label: { Label(Words.minutes(snooze), systemImage: "moon.zzz") }
                     }
-                    Button("Skip") { onAction(.skip) }
+                    Button(tr("Skip", "Пропустити", "Пропустить")) { onAction(.skip) }
                 }
                 .buttonStyle(PillButtonStyle(compact: true))
             }
         } else {
             VStack(alignment: .leading, spacing: 6) {
-                Button { onAction(.done) } label: { Label("Done!", systemImage: "checkmark") }
+                Button { onAction(.done) } label: { Label(tr("Done!", "Готово!", "Готово!"), systemImage: "checkmark") }
                     .buttonStyle(PillButtonStyle(prominent: true, tint: store.accent))
                 HStack(spacing: 6) {
-                    Button { onAction(.snooze(60)) } label: { Label("+1 hour", systemImage: "clock.arrow.circlepath") }
-                    Button("+2 hours") { onAction(.snooze(120)) }
-                    Button("Skip") { onAction(.skip) }
+                    Button(tr("+1 hour", "+1 година", "+1 час")) { onAction(.snooze(60)) }
+                    Button(tr("+2 hours", "+2 години", "+2 часа")) { onAction(.snooze(120)) }
+                    Button(tr("Skip", "Пропустити", "Пропустить")) { onAction(.skip) }
                 }
                 .buttonStyle(PillButtonStyle(compact: true))
             }

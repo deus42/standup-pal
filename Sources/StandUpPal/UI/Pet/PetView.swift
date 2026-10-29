@@ -30,7 +30,7 @@ struct PetView: View {
                       effects: effects)
         }
         .aspectRatio(1, contentMode: .fit)
-        .accessibilityLabel("Your pet, \(mood.label.lowercased())")
+        .accessibilityLabel(tr("Your pet: \(mood.label)", "Твій улюбленець: \(mood.label)", "Твой питомец: \(mood.label)"))
     }
 }
 

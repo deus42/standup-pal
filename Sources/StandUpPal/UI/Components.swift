@@ -132,13 +132,15 @@ struct StatTile: View {
                 .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
             Text(value)
                 .font(.system(size: 17, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             if let caption {
-                Text(caption).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                Text(caption).font(.caption2).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
             }
         }
         .padding(10)
@@ -152,7 +154,7 @@ struct LevelBadge: View {
     let tint: Color
 
     var body: some View {
-        Text("Lv \(level)")
+        Text(tr("Lv \(level)", "Рів. \(level)", "Ур. \(level)"))
             .font(.system(size: 10.5, weight: .heavy, design: .rounded))
             .padding(.horizontal, 7)
             .padding(.vertical, 2.5)
@@ -194,9 +196,10 @@ struct ToastBanner: View {
 struct WeekdayPicker: View {
     @Binding var selection: Set<Int>
     var tint: Color = .accentColor
+    var dayWidth: CGFloat = 36
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             ForEach(Clock.orderedWeekdays, id: \.self) { weekday in
                 let on = selection.contains(weekday)
                 Button {
@@ -204,7 +207,7 @@ struct WeekdayPicker: View {
                 } label: {
                     Text(Clock.shortWeekdaySymbol(weekday))
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .frame(width: 36, height: 24)
+                        .frame(width: dayWidth, height: 24)
                         .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
                             .fill(on ? AnyShapeStyle(tint) : AnyShapeStyle(Color.primary.opacity(0.07))))
                         .foregroundStyle(on ? Color.white : Color.primary)
@@ -276,6 +279,108 @@ struct SplitMix {
     }
 
     mutating func unit() -> Double { Double(next() >> 11) / Double(1 << 53) }
+}
+
+// MARK: Settings layout
+
+/// A titled, rounded group in the style of System Settings, without the scroll view a
+/// grouped `Form` brings: settings windows size themselves to their content.
+struct SettingsGroup<Content: View>: View {
+    var title: String? = nil
+    var footer: String? = nil
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let title {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 4)
+            }
+            VStack(spacing: 0) { content }
+                .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.primary.opacity(0.04)))
+                .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color.primary.opacity(0.07)))
+            if let footer {
+                Text(footer)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// One line in a `SettingsGroup`: a label on the left, a control on the right.
+struct SettingsRow<Trailing: View>: View {
+    let title: String
+    var subtitle: String? = nil
+    var divider = true
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(.system(size: 13))
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let subtitle {
+                        Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .layoutPriority(1)
+                Spacer(minLength: 8)
+                trailing
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .frame(minHeight: 36)
+            if divider {
+                Divider().padding(.leading, 12)
+            }
+        }
+    }
+}
+
+/// A toggle row with a small switch.
+struct SettingsToggle: View {
+    let title: String
+    var subtitle: String? = nil
+    @Binding var isOn: Bool
+    var divider = true
+
+    var body: some View {
+        SettingsRow(title: title, subtitle: subtitle, divider: divider) {
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+        }
+    }
+}
+
+/// A stepper whose value is shown as text next to it.
+struct ValueStepper: View {
+    @Binding var value: Int
+    var range: ClosedRange<Int>
+    var step = 1
+    var label: (Int) -> String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(label(value)).monospacedDigit().foregroundStyle(.secondary)
+            Stepper("", value: $value, in: range, step: step).labelsHidden()
+        }
+    }
+}
+
+/// Reports a view's height so AppKit can size the window around it.
+struct HeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 // MARK: AppKit glue
