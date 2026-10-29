@@ -6,8 +6,8 @@ Personal project: a native macOS menu bar stand-up reminder with a fitness pet. 
 
 - Build: `swift build`
 - Test: `scripts/test.sh` (wraps `swift test` and points at the Swift Testing macro plugin when only Command Line Tools exist)
-- App bundle: `scripts/build-app.sh` (flags: `--install` copies to `/Applications`, or `~/Applications` when not writable, and launches; `--universal` builds arm64 + x86_64; `--zip` writes `build/StandUp-Pal-<version>.zip` plus a `.sha256` for GitHub releases)
-- Release: `scripts/build-app.sh --universal --zip`, then `gh release create v<version> build/StandUp-Pal-<version>.zip build/StandUp-Pal-<version>.zip.sha256`. Builds are ad-hoc signed and not notarized, so release notes must keep the Gatekeeper "Open Anyway" / `xattr` steps.
+- App bundle: `scripts/build-app.sh` (flags: `--install` copies to `/Applications`, or `~/Applications` when not writable, and launches; `--universal` builds arm64 + x86_64; `--zip` / `--dmg` write `build/StandUp-Pal-<version>.zip` / `.dmg` plus a `.sha256` for GitHub releases; the DMG window layout comes from `scripts/dmg-layout.py`, which writes the Finder `.DS_Store` directly, so no Finder scripting or extra tools are needed)
+- Release: `scripts/build-app.sh --universal --dmg --zip`, then `gh release create v<version> build/StandUp-Pal-<version>.{dmg,zip}*`. Builds are ad-hoc signed and not notarized, so release notes must keep the Gatekeeper "Open Anyway" / `xattr` steps.
 - Visual check without screen-recording permission: `"build/StandUp Pal.app/Contents/MacOS/StandUpPal" --snapshot <dir> [--all-languages]` writes PNGs of every window. Snapshot runs keep state in the separate `com.deus.standuppal.snapshot` defaults suite, skip the single-instance check and mute sounds, so they can run next to the installed app without touching the user's progress. Add `--showcase` for the README demo state (level 10, gear, two weeks of stats, all-day work hours).
 - README art: `--export-lineup docs/lineup.png` (species banner) and `--export-icon` (app icon).
 - Pet art check: `.build/debug/StandUpPal --export-gallery <png>` renders every species, Booty's back view, all gear and dark palettes.

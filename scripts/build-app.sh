@@ -5,6 +5,7 @@
 #   scripts/build-app.sh --universal   # one app for Apple silicon and Intel
 #   scripts/build-app.sh --install     # also copy to /Applications (or ~/Applications) and launch it
 #   scripts/build-app.sh --zip         # also write ./build/StandUp-Pal-<version>.zip for a release
+#   scripts/build-app.sh --dmg         # also write ./build/StandUp-Pal-<version>.dmg (drag-to-Applications installer)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -16,11 +17,13 @@ APP="$BUILD_DIR/$APP_NAME.app"
 UNIVERSAL=0
 INSTALL=0
 ZIP=0
+DMG=0
 for arg in "$@"; do
   case "$arg" in
     --universal) UNIVERSAL=1 ;;
     --install) INSTALL=1 ;;
     --zip) ZIP=1 ;;
+    --dmg) DMG=1 ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -77,6 +80,31 @@ if [[ $ZIP == 1 ]]; then
   ditto -c -k --sequesterRsrc --keepParent "$APP" "$ARCHIVE"
   (cd "$BUILD_DIR" && shasum -a 256 "$(basename "$ARCHIVE")" > "$(basename "$ARCHIVE").sha256")
   echo "✓ Zipped: $ARCHIVE"
+fi
+
+if [[ $DMG == 1 ]]; then
+  VERSION="$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")"
+  IMAGE="$BUILD_DIR/StandUp-Pal-$VERSION.dmg"
+  HELP="If it won't open.txt"
+  DMG_WORK="$(mktemp -d)"
+  STAGE="$DMG_WORK/stage"
+  mkdir -p "$STAGE" "$DMG_WORK/mount"
+  ditto "$APP" "$STAGE/$APP_NAME.app"
+  ln -s /Applications "$STAGE/Applications"
+  cp "$ROOT/Resources/dmg-readme.txt" "$STAGE/$HELP"
+  cp "$APP/Contents/Resources/AppIcon.icns" "$STAGE/.VolumeIcon.icns"
+  python3 "$ROOT/scripts/dmg-layout.py" "$STAGE/.DS_Store" "$APP_NAME.app" "$HELP"
+  hdiutil create -quiet -volname "$APP_NAME" -srcfolder "$STAGE" -fs HFS+ -format UDRW -ov "$DMG_WORK/rw.dmg"
+  hdiutil attach -quiet -nobrowse -noautoopen -readwrite -mountpoint "$DMG_WORK/mount" "$DMG_WORK/rw.dmg"
+  # Tell Finder the volume has a custom icon (.VolumeIcon.icns): kHasCustomIcon in FinderInfo.
+  xattr -wx com.apple.FinderInfo "0000000000000000040000000000000000000000000000000000000000000000" "$DMG_WORK/mount"
+  rm -rf "$DMG_WORK/mount/.fseventsd"
+  hdiutil detach -quiet "$DMG_WORK/mount"
+  rm -f "$IMAGE"
+  hdiutil convert -quiet "$DMG_WORK/rw.dmg" -format UDZO -imagekey zlib-level=9 -o "$IMAGE"
+  rm -rf "$DMG_WORK"
+  (cd "$BUILD_DIR" && shasum -a 256 "$(basename "$IMAGE")" > "$(basename "$IMAGE").sha256")
+  echo "✓ Disk image: $IMAGE"
 fi
 
 if [[ $INSTALL == 1 ]]; then

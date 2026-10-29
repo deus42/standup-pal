@@ -96,8 +96,8 @@ Requires **macOS 14 Sonoma or later**. Runs natively on Apple silicon and Intel.
 
 ### Download
 
-1. Grab **`StandUp-Pal-<version>.zip`** from the [latest release](https://github.com/deus42/standup-pal/releases/latest) and unzip it.
-2. Drag **StandUp Pal** into your **Applications** folder.
+1. Grab **`StandUp-Pal-<version>.dmg`** from the [latest release](https://github.com/deus42/standup-pal/releases/latest) and open it. (Prefer a zip? It's there too.)
+2. Drag **StandUp Pal** onto the **Applications** folder in the window that opens.
 3. Open it. The app is free and open source but not notarized by Apple, so the first launch needs one extra step:
    - macOS will say it can't verify the app. Open **System Settings › Privacy & Security**, scroll down and click **Open Anyway**, or
    - run this once in Terminal:
@@ -116,7 +116,7 @@ cd standup-pal
 scripts/build-app.sh --install
 ```
 
-This builds a release `.app`, renders its icon, signs it ad-hoc, copies it to `/Applications` (or `~/Applications` if that isn't writable) and launches it. Without `--install` the app lands in `build/StandUp Pal.app`. Add `--universal` for an Apple silicon + Intel build and `--zip` for a release archive with a SHA-256 checksum.
+This builds a release `.app`, renders its icon, signs it ad-hoc, copies it to `/Applications` (or `~/Applications` if that isn't writable) and launches it. Without `--install` the app lands in `build/StandUp Pal.app`. Add `--universal` for an Apple silicon + Intel build, and `--dmg` / `--zip` for a drag-to-Applications disk image or a zip, each with a SHA-256 checksum.
 
 Turn on **Settings › General › Launch at login** to have it start with your Mac.
 
