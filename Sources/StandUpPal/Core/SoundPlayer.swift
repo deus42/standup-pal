@@ -14,6 +14,8 @@ final class SoundPlayer {
     private var cache: [String: Data] = [:]
     private var players: [AVAudioPlayer] = []
     private var systemSound: NSSound?
+    /// Silences everything without touching the user's setting (snapshot runs).
+    var isMuted = false
 
     func play(_ cue: Cue) {
         let s = AppStore.shared.settings
@@ -26,6 +28,7 @@ final class SoundPlayer {
     }
 
     private func play(_ cue: Cue, choice: SoundChoice, volume: Double) {
+        guard !isMuted else { return }
         let v = Float(max(0, min(1, volume)))
         switch cue {
         case .reminder, .renudge:

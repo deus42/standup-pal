@@ -7,7 +7,8 @@ Personal project: a native macOS menu bar stand-up reminder with a fitness pet. 
 - Build: `swift build`
 - Test: `scripts/test.sh` (wraps `swift test` and points at the Swift Testing macro plugin when only Command Line Tools exist)
 - App bundle: `scripts/build-app.sh` (add `--install` to copy to `~/Applications` and launch)
-- Visual check without screen-recording permission: `"build/StandUp Pal.app/Contents/MacOS/StandUpPal" --snapshot <dir> [--all-languages]` writes PNGs of every window. Snapshot runs keep state in the separate `com.deus.standuppal.snapshot` defaults suite, skip the single-instance check and mute sounds, so they can run next to the installed app without touching the user's progress.
+- Visual check without screen-recording permission: `"build/StandUp Pal.app/Contents/MacOS/StandUpPal" --snapshot <dir> [--all-languages]` writes PNGs of every window. Snapshot runs keep state in the separate `com.deus.standuppal.snapshot` defaults suite, skip the single-instance check and mute sounds, so they can run next to the installed app without touching the user's progress. Add `--showcase` for the README demo state (level 10, gear, two weeks of stats, all-day work hours).
+- README art: `--export-lineup docs/lineup.png` (species banner) and `--export-icon` (app icon).
 - Pet art check: `.build/debug/StandUpPal --export-gallery <png>` renders every species, Booty's back view, all gear and dark palettes.
 
 ## Rules of the codebase

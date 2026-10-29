@@ -1,96 +1,180 @@
-# StandUp Pal 🧍
+<div align="center">
 
-A native macOS menu bar app with a fitness pet that gets you out of your chair **5 minutes before every working hour ends**, walks you through a short warm-up, and levels up every time you move. Speaks **English, Ukrainian and Russian**.
+<img src="docs/icon.png" width="128" alt="StandUp Pal app icon">
 
-![The pet's moods](docs/pets.png)
+# StandUp Pal
 
-## What it does
+**A tiny fitness pet in your Mac's menu bar that gets you out of your chair before every hour ends.**
 
-**Stand-up reminders**
-- Fires at **:55 of every working hour** by default (09:55 … 17:55 for a 9–18 day).
-- Configurable: working hours, work days, interval (30 min to 2 h), minutes before the slot ends, an optional quiet lunch break.
-- The reminder is a floating card in the top-right corner that **never steals keyboard focus**. Its buttons: *Start warm-up*, *Stood up*, *Snooze 5 min* (up to 3 times), *Skip*.
-- A gentle second nudge after 3 minutes. The card retires on its own after 20 minutes.
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-111111?logo=apple&logoColor=white)](#-install)
+[![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white)](Package.swift)
+[![No dependencies](https://img.shields.io/badge/dependencies-none-2EA44F)](Package.swift)
+[![Languages](https://img.shields.io/badge/lang-EN%20%C2%B7%20UK%20%C2%B7%20RU-8A63D2)](#-three-languages)
+[![License: MIT](https://img.shields.io/badge/license-MIT-3DA639)](LICENSE)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-buy%20me%20a%20coffee-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/deus42)
 
-**Guided warm-up**
-- 2, 3 or 5 minutes, with a fresh random mix each time: an energising opener, a shuffled middle, then a calm closer (breathing or an eye break).
-- 16 built-in exercises. You can switch any of them off or **add your own**.
+<img src="docs/lineup.png" width="880" alt="Fourteen fitness pets, each with its own sport">
+
+</div>
+
+---
+
+Sitting all day is rough on your back, your eyes and your mood, and most break timers just nag. StandUp Pal nudges you **five minutes before every working hour ends**, walks you through a **2–5 minute warm-up**, and turns every stretch into XP for a pet that levels up, unlocks fitness gear, and is genuinely delighted when you move.
+
+It's a native macOS app: a few megabytes of Swift, no Electron, no accounts, no network.
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/popover.png" alt="Menu bar popover"><br><sub><b>Click the pet:</b> countdown, today's progress, streak, mood</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/warmup.png" alt="Guided warm-up"><br><sub><b>Guided warm-ups</b> with a fresh mix every time</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/settings-gear.png" alt="Fitness gear"><br><br><img src="docs/screenshots/standup-card.png" alt="Stand-up reminder"><br><sub><b>Fitness gear</b> to unlock, and a reminder that never steals focus</sub></td>
+  </tr>
+</table>
+
+## ✨ Features
+
+### 🧍 Stand-up reminders that respect your flow
+- Fires at **:55 of every working hour** by default (09:55 … 17:55 for a 9–18 day). Interval (30 min to 2 h), lead time, working hours, work days and a quiet lunch break are all yours to set.
+- The reminder is a floating card in the top-right corner that **never steals keyboard focus**: *Start warm-up*, *Stood up*, *Snooze*, *Skip*.
+- A gentle second nudge after 3 minutes; the card retires on its own after 20.
+
+### 🤸 Guided warm-ups
+- 2, 3 or 5 minutes: an energising opener, a shuffled middle, a calm closer (breathing or an eye break).
+- 16 built-in desk-friendly exercises. Switch any of them off, or **add your own**.
 - Countdown ring, "up next" preview, pause/skip/end, optional spoken exercise names, and confetti at the end.
 
-**Extra reminders (your own exercises)**
-- Push-ups, water, a walk, anything: pick an emoji, a note, set times ("11:30 and 16:30") or an interval ("every 2 h from 10:00 to 18:00"), and the days.
-- When one pops up: **Done**, **+1 hour**, **+2 hours**, or **Skip**.
+### 💪 Your own exercise reminders
+- Push-ups, water, a walk, anything: pick an emoji and a note, set times ("11:30 and 16:30") or an interval ("every 2 h, 10:00–18:00"), and the days.
+- When one pops up: **Done**, **+1 hour**, **+2 hours** or **Skip**.
 
-**The pet**
-- 14 fitness pets, each with its own sport: Blob (gym buddy), Booty (squat pro, who turns round now and then to wiggle its peachy behind), Kitty, Bunny, Bear, Panda, Fox, Puppy, Hamster, Penguin, Frog, Chick, Axolotl and Dino.
-- 28 two-tone palettes (body + belly), plus any custom colour. The app's accent colour follows the pet.
-- Seven animated moods: it sleeps outside work hours, waves when it's time, sweats during warm-ups, and sulks a little when you skip.
-- Fitness gear, one item per slot, unlocked by levelling up: head (🎽 sweatband from the start, cap Lv 3, headphones Lv 6, shades Lv 9, crown Lv 12), hands (water bottle Lv 2, dumbbells Lv 5, kettlebell Lv 8, trophy Lv 15) and neck (towel Lv 4, whistle Lv 7, medal Lv 10).
-- Happiness, daily goal, streaks (days off never break a streak), and a 14-day chart.
-- Tap it in the popover. It likes that.
-- Don't want a pet? Untick **Pet** and you get a clean SF Symbol and the same reminders.
+### 🐾 Fourteen fitness pets
+Blob the gym buddy, Kitty the yoga master, Bear the powerlifter, Penguin the swimmer, Chick the coach, Axolotl on aqua aerobics, Dino the cardio-saurus… and **Booty**, the squat pro, who looks just like Blob until it turns round to wiggle its peachy behind. 🍑
 
-**Smart behaviour** (each can be switched off)
-- **Already away?** If there's been no keyboard or mouse input for 5+ minutes when a stand-up is due, it counts as done and stays quiet.
-- **On a call?** If your camera or microphone is in use, reminders wait (silently) until the call ends. This only asks macOS whether a device is busy; it never records anything and needs no permissions.
-- Sleep/wake safe: reminders missed while the Mac slept are dropped, not dumped on you all at once.
+- Seven animated moods: it dozes outside work hours, waves when it's time, sweats through warm-ups, celebrates your wins and sulks (a little) when you skip.
+- **28 two-tone palettes** (body + belly) plus any custom colour. The whole app picks up your pet's colour.
+- Don't want a pet? Untick **Pet** for a clean SF Symbol and the same reminders.
 
-**Languages**: English, Ukrainian and Russian, switchable live in Settings › General or the right-click menu (or "Same as macOS"). Ukrainian and Russian use proper plural forms and avoid gendered verb forms, since neither your gender nor the pet's is known.
+<details>
+<summary><b>See every pet, mood and piece of gear</b></summary>
+<br>
+<img src="docs/pets.png" width="560" alt="Art sheet: all species, moods, gear and palettes">
+</details>
 
-**Sounds**: soft, synthesized chimes (Soft chime, Marimba, Kalimba, Bubble pop, or the system Tink/Glass), a volume slider, and one **Sound** checkbox to turn them all off.
+### 🏋️ Fitness gear
+Stand-ups and warm-ups earn XP. Levels unlock gear, one item per slot, to mix and match:
 
-## Using it
+| Slot | Gear (unlock level) |
+| --- | --- |
+| Head | Sweatband (from the start) · Cap (3) · Headphones (6) · Shades (9) · Crown (12) |
+| Hands | Water bottle (2) · Dumbbells (5) · Kettlebell (8) · Trophy (15) |
+| Neck | Towel (4) · Whistle (7) · Medal (10) |
 
-- **Click** the pet in the menu bar to open its home: countdown, today's progress, upcoming extras, and the **Sound** / **Pet** checkboxes.
-- **Right-click** it for a quick menu: start a warm-up, toggle Sound/Pet/countdown, pause (30 min, 1 h, 2 h, until tomorrow), language, Settings, Quit.
-- **Settings** has seven tabs (General, Reminders, Warm-up, Pet, Gear, Stats, About). None of them scrolls: the window resizes to fit each tab.
-- The countdown next to the icon hides overnight and on weekends.
+Plus a daily goal, streaks (days off never break one), happiness and a 14-day chart.
 
-## Build & install
+### 🧠 Smart, not naggy
+- **Already away?** No keyboard or mouse for 5+ minutes when a stand-up is due counts as done, and stays quiet.
+- **On a call?** If your camera or microphone is in use by an app, reminders wait silently until the call ends. It only asks macOS whether a device is busy: nothing is recorded and no permissions are needed.
+- **Sleep-safe:** reminders missed while the Mac slept are dropped, not dumped on you all at once.
 
-Needs macOS 14+ and Swift (Command Line Tools are enough; no Xcode required).
+### 🔔 Gentle sounds
+Soft synthesized chimes (Soft chime, Marimba, Kalimba, Bubble pop, or the system Tink/Glass), a volume slider, and one **Sound** checkbox to turn them all off.
+
+### 🌍 Three languages
+English, **Українська** and **Русский**, switchable live from the right-click menu or Settings (or "Same as macOS"). Proper plural forms ("1 перерва, 3 перерви, 6 перерв"), and the Ukrainian and Russian texts avoid gendered verb forms, because neither your gender nor your pet's is known.
+
+<p align="center">
+  <img src="docs/screenshots/popover-uk.png" width="260" alt="Ukrainian">&nbsp;&nbsp;
+  <img src="docs/screenshots/popover-ru.png" width="260" alt="Russian">
+</p>
+
+### 🔒 Private by design
+Everything stays on your Mac: no accounts, no network, no analytics, no telemetry. State lives in `UserDefaults`.
+
+## 📦 Install
+
+You need **macOS 14 Sonoma or later** and a Swift toolchain. Full Xcode works; so do just the Command Line Tools (`xcode-select --install`).
 
 ```bash
+git clone https://github.com/deus42/standup-pal.git
+cd standup-pal
 scripts/build-app.sh --install
 ```
 
 This builds a release `.app`, renders its icon, signs it ad-hoc, copies it to `~/Applications` and launches it. Without `--install` the app lands in `build/StandUp Pal.app`.
 
-Turn on **Settings › General › Launch at login** to have it start automatically.
+Turn on **Settings › General › Launch at login** to have it start with your Mac.
 
-## Development
+## 🕹️ Using it
 
-```bash
-swift build                 # debug build
-scripts/test.sh             # 28 tests: scheduling, live ticks, flows, persistence, routines, languages, palettes, gear
+- **Click** the pet in the menu bar: countdown, today's progress, upcoming extras, and the **Sound** / **Pet** checkboxes.
+- **Right-click** it: start a warm-up, toggle Sound/Pet/countdown, pause (30 min, 1 h, 2 h, until tomorrow), language, Settings, Quit.
+- **Settings** has seven tabs (General, Reminders, Warm-up, Pet, Gear, Stats, About). None of them scrolls: the window resizes to fit each tab.
+- Tap your pet. It likes that.
+
+<details>
+<summary><b>Settings tour</b></summary>
+<br>
+<img src="docs/screenshots/settings-pet.png" width="720" alt="Pet settings"><br><br>
+<img src="docs/screenshots/settings-general.png" width="720" alt="General settings"><br><br>
+<img src="docs/screenshots/settings-stats.png" width="720" alt="Stats"><br><br>
+<img src="docs/screenshots/extra-card.png" width="430" alt="Extra reminder card">
+</details>
+
+## 🛠️ How it's built
+
+- **100% Swift**, SwiftPM only: no Xcode project, no third-party dependencies, **no asset files**. The pets, the app icon and every sound are drawn or synthesized in code.
+- **AppKit** for the status item, the non-activating reminder panel and windows; **SwiftUI** for every view; **Swift Charts** for stats.
+- A procedural **pet painter** (SwiftUI `Canvas`, 100×100 design space) renders the live pet, the menu bar icon and the app icon from one code path.
+- The **scheduler** derives everything from the clock on each tick and stays idempotent, so sleep, wake and relaunch can't double-fire.
+- **Presence** comes from `CGEventSource` idle time, Core Audio process input state and CoreMediaIO, none of which need permissions.
+- **Localization** is `tr("English", "Українська", "Русский")` at the point of use, so a missing translation is a compile error rather than a surprise.
+
+```
+Sources/StandUpPal/
+  App/        AppDelegate (status item, menus, windows), entry point, icon/art export
+  Core/       AppStore (persistence), Scheduler, Presence, SoundPlayer (synth), PetTalk
+  Model/      Settings (species, gear), reminders, exercises, progress
+  Support/    L10n (tr, plurals), Clock (localized time formatting), RGB + palettes
+  UI/         Popover, reminder card, warm-up, settings tabs, pet painter
 ```
 
-Handy launch flags for the built binary:
+## 🧪 Development
+
+```bash
+swift build          # debug build
+scripts/test.sh      # 28 tests: scheduling, live ticks, flows, persistence, routines, languages, palettes, gear
+```
+
+Handy flags for the built binary:
 
 | Flag | Does |
 | --- | --- |
 | `--demo-reminder` / `--demo-extra` | show a preview reminder card |
 | `--demo-warmup` | start a warm-up |
 | `--open-settings` / `--open-popover` | open those windows |
-| `--snapshot <dir>` | render every window to PNGs, then quit (no screen-recording permission needed; uses its own state, so it never touches yours) |
-| `--snapshot <dir> --all-languages` | the same in English, Ukrainian and Russian |
-| `--export-icon <png>` / `--export-gallery <png>` | render the app icon / all pets |
+| `--snapshot <dir>` | render every window to PNGs, then quit (no screen-recording permission needed; uses its own state, never yours) |
+| `--snapshot <dir> --all-languages --showcase` | the same in all three languages, with a lived-in demo pet |
+| `--export-icon <png>` / `--export-lineup <png>` / `--export-gallery <png>` | render the app icon / the pet lineup / the full art sheet |
 
-Layout:
+Toolchain note: in the macOS 27 SDK `@State` resolves to a macro whose plugin ships only with full Xcode, so views use `@ViewState` (a typealias to the same property wrapper) and build fine with just the Command Line Tools. `scripts/test.sh` similarly points the compiler at the Swift Testing macro plugin.
 
-```
-Sources/StandUpPal/
-  App/        AppDelegate (status item, menus, windows), entry point, icon export
-  Core/       AppStore (persistence), Scheduler, Presence (idle/camera/mic), SoundPlayer (synth), PetTalk
-  Model/      Settings (species, gear), reminders, exercises, progress
-  Support/    L10n (tr(en, uk, ru), plurals), Clock (localized time formatting), RGB + palettes
-  UI/         Popover, reminder card, warm-up, settings tabs, pet painter
-```
+To start over: `defaults delete com.deus.standuppal`.
 
-Notes:
-- Everything (pet, icon, sounds) is drawn or synthesized in code, so there are no asset files.
-- Every user-facing string is written as `tr("English", "Українська", "Русский")` at the point of use, so a missing translation is a compile error rather than a surprise.
-- In the macOS 27 SDK `@State` resolves to a macro whose plugin ships only with full Xcode, so views use `@ViewState` (a typealias to the same property wrapper). `scripts/test.sh` similarly points the compiler at the Swift Testing macro plugin when only Command Line Tools are installed.
-- State lives in `UserDefaults` (`com.deus.standuppal`). To start over: `defaults delete com.deus.standuppal`.
+## 🤝 Contributing
 
-Everything stays on your Mac: no accounts, no network, no analytics.
+Issues and pull requests are welcome: new species, gear, exercises, sounds, or another language. A few house rules keep the app what it is:
+
+- No network access, analytics or bundled assets: draw it or synthesize it.
+- Every user-facing string goes through `tr(en, uk, ru)` (or `Words` for counted nouns). Adding a language means adding a case to `Lang` and a parameter to `tr`, and the compiler will show you every string to translate.
+- Settings tabs must fit without scrolling.
+- Run `scripts/test.sh`, and check your UI with `--snapshot --all-languages`.
+
+## ☕ Support
+
+If StandUp Pal got you off your chair, you can buy me a coffee. It keeps the pets fed. 🐾
+
+<a href="https://ko-fi.com/deus42"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
+
+## 📄 License
+
+[MIT](LICENSE) © 2026 Oleksii Gapchenko

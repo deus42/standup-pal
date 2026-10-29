@@ -540,6 +540,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 // MARK: Debug snapshots
 
 extension AppDelegate {
+    /// `--showcase`: a lived-in demo for screenshots. Only ever runs on the separate
+    /// snapshot defaults suite.
+    fileprivate func applyShowcaseState() {
+        var s = store.settings
+        s.workStartMinute = 0
+        s.workEndMinute = 24 * 60 - 1
+        s.workDays = Set(1...7)
+        s.petName = "Pip"
+        s.petSpecies = .blob
+        s.petColorHex = "#7ED6B2"
+        s.petBellyHex = "#E4F8EF"
+        s.petHead = .sweatband
+        s.petHands = .dumbbells
+        s.petNeck = .medal
+        s.soundEnabled = true
+        store.settings = s
+        store.pet = PetState(xp: 1420, happiness: 92, totalStandups: 214, totalWarmUps: 131, totalExtras: 58, bestStreak: 9)
+        var stats: [String: DayStats] = [:]
+        for (offset, done) in [6, 7, 6, 8, 6, 4, 6, 7, 5, 6, 8, 6, 3, 6].enumerated() {
+            let day = Clock.addDays(-(offset + 1), to: Date())
+            stats[Clock.dayKey(day)] = DayStats(standupsDone: done, warmUps: max(0, done - 2), extrasDone: done / 3, activeSeconds: done * 150)
+        }
+        stats[store.todayKey] = DayStats(standupsDone: 5, warmUps: 4, snoozed: 1, extrasDone: 2, activeSeconds: 760)
+        store.stats = stats
+        store.runtime.hasOnboarded = true
+        store.showWelcome = false
+        store.toast = nil
+        // Nothing real may be on screen while the previews are captured.
+        let soon = Date().addingTimeInterval(60)
+        store.runtime.firedIDs.formUnion(scheduler.occurrences(on: Date()).filter { $0.due <= soon }.map(\.id))
+        scheduler.pause(minutes: 1)
+        scheduler.resume()
+    }
+
     /// `--snapshot <dir>` renders the app's real windows to PNG files from inside the
     /// process (no screen-recording permission needed), then quits. Used to check the UI.
     fileprivate func runSnapshots(into directory: URL) {
@@ -565,7 +599,8 @@ extension AppDelegate {
             try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
         }
 
-        store.settings.soundEnabled = false
+        SoundPlayer.shared.isMuted = true
+        if CommandLine.arguments.contains("--showcase") { applyShowcaseState() }
         Task { @MainActor in
             let languages: [AppLanguage] = CommandLine.arguments.contains("--all-languages") ? [.en, .uk, .ru] : [store.settings.language]
             for language in languages {

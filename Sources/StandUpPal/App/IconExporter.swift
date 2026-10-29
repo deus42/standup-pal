@@ -13,6 +13,11 @@ enum IconExporter {
         write(PetGallery(), scale: 2, to: path)
     }
 
+    /// README banner: every species in its own palette and gear.
+    static func exportLineup(to path: String) {
+        write(PetLineup(), scale: 2, to: path)
+    }
+
     private static func write<V: View>(_ view: V, scale: CGFloat, to path: String) {
         let renderer = ImageRenderer(content: view)
         renderer.scale = scale
@@ -101,6 +106,66 @@ struct PetGallery: View {
         }
         .padding(12)
         .background(Color.white)
+    }
+}
+
+struct PetLineup: View {
+    private struct Member: Identifiable {
+        let species: PetSpecies
+        let palette: String
+        var head: HeadGear = .none
+        var hands: HandGear = .none
+        var neck: NeckGear = .none
+        var mood: PetMood = .idle
+        var id: PetSpecies { species }
+    }
+
+    private let members: [Member] = [
+        Member(species: .blob, palette: "mint", head: .sweatband, hands: .dumbbells),
+        Member(species: .booty, palette: "peach", head: .sweatband),
+        Member(species: .kitty, palette: "lavender", head: .headphones),
+        Member(species: .bunny, palette: "bubblegum", head: .cap, mood: .happy),
+        Member(species: .bear, palette: "caramel", hands: .kettlebell),
+        Member(species: .panda, palette: "graphite", head: .shades),
+        Member(species: .fox, palette: "tangerine", neck: .towel),
+        Member(species: .puppy, palette: "honey", head: .sweatband, mood: .happy),
+        Member(species: .hamster, palette: "blush", hands: .bottle),
+        Member(species: .penguin, palette: "midnight", neck: .medal),
+        Member(species: .frog, palette: "matcha", head: .cap),
+        Member(species: .chick, palette: "lemon", neck: .whistle, mood: .happy),
+        Member(species: .axolotl, palette: "cottonCandy", head: .crown),
+        Member(species: .dino, palette: "forest", hands: .trophy, mood: .happy),
+    ]
+
+    var body: some View {
+        VStack(spacing: 14) {
+            ForEach([0, 7], id: \.self) { start in
+                HStack(spacing: 10) {
+                    ForEach(members[start..<start + 7]) { member in
+                        cell(member)
+                    }
+                }
+            }
+        }
+        .padding(16)
+    }
+
+    private func cell(_ m: Member) -> some View {
+        let palette = PetPalette.all.first { $0.id == m.palette } ?? PetPalette.all[0]
+        let look = PetLook(species: m.species, color: RGB(hex: palette.body), belly: RGB(hex: palette.belly),
+                           head: m.head, hands: m.hands, neck: m.neck)
+        let t = m.species == .booty ? PetPainter.showcaseTime(for: .booty) : (m.mood == .happy ? 0.3 : 1.2)
+        return VStack(spacing: 2) {
+            PetCanvas(look: look, mood: m.mood, t: t, effects: false)
+                .frame(width: 112, height: 112)
+            Text(m.species.label)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundColor(Color(white: 0.5))
+            Text(m.species.role)
+                .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                .foregroundColor(Color(white: 0.58))
+        }
+        .frame(width: 124)
     }
 }
 

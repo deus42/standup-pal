@@ -15,6 +15,12 @@ if let index = arguments.firstIndex(of: "--export-gallery"), index + 1 < argumen
     }
     exit(0)
 }
+if let index = arguments.firstIndex(of: "--export-lineup"), index + 1 < arguments.count {
+    MainActor.assumeIsolated {
+        IconExporter.exportLineup(to: arguments[index + 1])
+    }
+    exit(0)
+}
 
 MainActor.assumeIsolated {
     let app = NSApplication.shared
