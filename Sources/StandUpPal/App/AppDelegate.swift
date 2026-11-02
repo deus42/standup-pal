@@ -359,6 +359,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let header = NSMenuItem(title: menuHeader(now), action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
+        if let update = Updater.shared.available {
+            let title = tr("Update to \(update.version)…", "Оновити до \(update.version)…", "Обновить до \(update.version)…")
+            menu.addItem(item(title, #selector(menuInstallUpdate)))
+        }
         menu.addItem(item(tr("Start warm-up now", "Почати розминку зараз", "Начать разминку сейчас"), #selector(menuStartWarmUp)))
         menu.addItem(.separator())
 
@@ -425,6 +429,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func menuStartWarmUp() { openWarmUp(nil) }
+    @objc private func menuInstallUpdate() { Updater.shared.install() }
     @objc private func menuToggleSound() { store.settings.soundEnabled.toggle() }
     @objc private func menuTogglePet() { store.settings.petEnabled.toggle() }
     @objc private func menuToggleCountdown() { store.settings.showCountdown.toggle() }

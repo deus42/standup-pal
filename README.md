@@ -123,6 +123,12 @@ This builds a release `.app`, renders its icon, signs it ad-hoc, copies it to `/
 
 Turn on **Settings › General › Launch at login** to have it start with your Mac.
 
+### Building for several Macs
+
+Run `scripts/make-signing-cert.sh` once. It creates a personal code-signing certificate in your login keychain, and every build is signed with it from then on. macOS then keeps the app's permissions (iCloud Drive, Launch at login) across updates.
+
+`scripts/build-app.sh --universal --install --publish-update` installs the build here and offers it to your other Macs through iCloud Drive. They show **Update** in the menu bar popover, and one click swaps the app and relaunches it. The app installs an update only if it is signed with the same certificate as itself. No network is involved.
+
 ## 🕹️ Using it
 
 - **Click** the pet in the menu bar: countdown, today's progress, upcoming extras, and the **Sound** / **Pet** checkboxes.

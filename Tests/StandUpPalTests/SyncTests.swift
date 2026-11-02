@@ -183,3 +183,25 @@ struct SyncTests {
         #expect(try SyncFiles.read(folder).get() == SyncSnapshot())
     }
 }
+
+@Suite("Updates")
+struct UpdateTests {
+    @Test func manifestFromThePublishScriptDecodes() throws {
+        let json = #"{ "build" : 5, "date" : "2026-11-02T16:00:00Z", "file" : "StandUp-Pal-1.3.1.zip", "sha256" : "abc", "version" : "1.3.1" }"#
+        let manifest = try #require(UpdateManifest.decode(Data(json.utf8)))
+        #expect(manifest.version == "1.3.1" && manifest.build == 5 && manifest.file == "StandUp-Pal-1.3.1.zip")
+        #expect(manifest.isNewer(than: 4))
+        #expect(!manifest.isNewer(than: 5))
+        #expect(!manifest.isNewer(than: 6))
+    }
+
+    @Test func brokenManifestsAreIgnored() {
+        #expect(UpdateManifest.decode(Data("{}".utf8)) == nil)
+        #expect(UpdateManifest.decode(Data("not json".utf8)) == nil)
+    }
+
+    @Test func aTestRunnerIsNotCertificateSignedSoItNeverSelfUpdates() {
+        // swift test binaries are ad-hoc signed (or unsigned): no certificate requirement.
+        #expect(Updater.signingRequirement() == nil)
+    }
+}

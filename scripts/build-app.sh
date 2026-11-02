@@ -6,6 +6,10 @@
 #   scripts/build-app.sh --install     # also copy to /Applications (or ~/Applications) and launch it
 #   scripts/build-app.sh --zip         # also write ./build/StandUp-Pal-<version>.zip for a release
 #   scripts/build-app.sh --dmg         # also write ./build/StandUp-Pal-<version>.dmg (drag-to-Applications installer)
+#   scripts/build-app.sh --publish-update  # also offer the build to your other Macs through iCloud Drive (implies --zip)
+#
+# Builds are signed with "StandUp Pal Local Signing" when scripts/make-signing-cert.sh has
+# created it, otherwise ad-hoc.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -18,12 +22,14 @@ UNIVERSAL=0
 INSTALL=0
 ZIP=0
 DMG=0
+PUBLISH=0
 for arg in "$@"; do
   case "$arg" in
     --universal) UNIVERSAL=1 ;;
     --install) INSTALL=1 ;;
     --zip) ZIP=1 ;;
     --dmg) DMG=1 ;;
+    --publish-update) PUBLISH=1; ZIP=1 ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -67,8 +73,15 @@ for size in 16 32 128 256 512; do
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 
-echo "→ Signing (ad-hoc)…"
-codesign --force --deep --sign - --timestamp=none "$APP" >/dev/null
+SIGN_NAME="StandUp Pal Local Signing"
+SIGN_ID="$(security find-certificate -c "$SIGN_NAME" -Z 2>/dev/null | awk '/SHA-1/{print $NF; exit}')"
+if [[ -n "$SIGN_ID" ]]; then
+  echo "→ Signing ($SIGN_NAME)…"
+  codesign --force --deep --sign "$SIGN_ID" --timestamp=none "$APP" >/dev/null
+else
+  echo "→ Signing (ad-hoc; run scripts/make-signing-cert.sh once to keep permissions across updates)…"
+  codesign --force --deep --sign - --timestamp=none "$APP" >/dev/null
+fi
 codesign --verify --deep --strict "$APP"
 
 echo "✓ Built: $APP ($(lipo -archs "$APP/Contents/MacOS/$EXECUTABLE"))"
@@ -105,6 +118,32 @@ if [[ $DMG == 1 ]]; then
   rm -rf "$DMG_WORK"
   (cd "$BUILD_DIR" && shasum -a 256 "$(basename "$IMAGE")" > "$(basename "$IMAGE").sha256")
   echo "✓ Disk image: $IMAGE"
+fi
+
+if [[ $PUBLISH == 1 ]]; then
+  [[ -n "$SIGN_ID" ]] || { echo "✗ Updates need a signed build: run scripts/make-signing-cert.sh first." >&2; exit 1; }
+  CLOUD="$HOME/Library/Mobile Documents/com~apple~CloudDocs/StandUp Pal"
+  [[ -d "$HOME/Library/Mobile Documents/com~apple~CloudDocs" ]] || { echo "✗ iCloud Drive is off on this Mac." >&2; exit 1; }
+  BUILD_NUMBER="$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP/Contents/Info.plist")"
+  mkdir -p "$CLOUD/Updates"
+  find "$CLOUD/Updates" -name 'StandUp-Pal-*.zip' ! -name "$(basename "$ARCHIVE")" -delete
+  ditto "$ARCHIVE" "$CLOUD/Updates/$(basename "$ARCHIVE")"
+  SHA="$(cut -d' ' -f1 "$ARCHIVE.sha256")"
+  cat > "$CLOUD/Updates/latest.json" <<JSON
+{
+  "build" : $BUILD_NUMBER,
+  "date" : "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "file" : "$(basename "$ARCHIVE")",
+  "sha256" : "$SHA",
+  "version" : "$VERSION"
+}
+JSON
+  if [[ $DMG == 1 ]]; then
+    mkdir -p "$CLOUD/Installer"
+    find "$CLOUD/Installer" -name 'StandUp-Pal-*.dmg' -delete
+    ditto "$IMAGE" "$CLOUD/Installer/$(basename "$IMAGE")"
+  fi
+  echo "✓ Offered $VERSION ($BUILD_NUMBER) to your Macs through iCloud Drive"
 fi
 
 if [[ $INSTALL == 1 ]]; then

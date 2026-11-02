@@ -343,6 +343,7 @@ struct GeneralSettings: View {
 
 struct AboutSettings: View {
     @EnvironmentObject var store: AppStore
+    @ObservedObject private var updater = Updater.shared
     let actions: AppActions
 
     var body: some View {
@@ -351,8 +352,23 @@ struct AboutSettings: View {
                 .frame(width: 120, height: 120)
             Text("StandUp Pal")
                 .font(.system(size: 26, weight: .heavy, design: .rounded))
-            Text(tr("Version \(version)", "Версія \(version)", "Версия \(version)"))
-                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Text(tr("Version \(version)", "Версія \(version)", "Версия \(version)"))
+                    .foregroundStyle(.secondary)
+                if updater.available != nil {
+                    Button("\(updater.buttonTitle) → \(updater.available?.version ?? "")") { updater.install() }
+                        .buttonStyle(PillButtonStyle(prominent: true, tint: store.accent, compact: true))
+                        .disabled(updater.state == .installing)
+                        .fixedSize()
+                } else if updater.canSelfUpdate {
+                    Label(tr("Up to date", "Остання версія", "Последняя версия"), systemImage: "checkmark.seal.fill")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if case .failed(let message) = updater.state {
+                Text(message).font(.caption).foregroundStyle(.orange)
+            }
             Text(tr("A tiny fitness pet that gets you out of your chair before every hour ends, guides a short warm-up, and grows with every stretch.",
                     "Маленький фітнес-улюбленець, що піднімає тебе зі стільця перед кінцем кожної години, проводить коротку розминку й росте з кожною розтяжкою.",
                     "Маленький фитнес-питомец, который поднимает тебя со стула перед концом каждого часа, проводит короткую разминку и растёт с каждой растяжкой."))

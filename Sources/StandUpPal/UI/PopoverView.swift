@@ -18,6 +18,7 @@ final class AppActions {
 struct PopoverView: View {
     @EnvironmentObject var store: AppStore
     @EnvironmentObject var scheduler: Scheduler
+    @ObservedObject private var updater = Updater.shared
     let actions: AppActions
 
     var body: some View {
@@ -27,6 +28,7 @@ struct PopoverView: View {
             if let toast = store.toast {
                 ToastBanner(toast: toast) { store.toast = nil }
             }
+            if updater.available != nil { updateCard }
             notices(now: now)
             nextCard(now: now)
             todayCard
@@ -76,6 +78,33 @@ struct PopoverView: View {
                 .fill(LinearGradient(colors: [store.petColor.opacity(0.38), store.petColor.opacity(0.1)],
                                      startPoint: .top, endPoint: .bottom))
         )
+    }
+
+    // MARK: Update
+
+    private var updateCard: some View {
+        Card {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(store.accent)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(updater.bannerTitle).font(.system(size: 12.5, weight: .semibold))
+                    if case .failed(let message) = updater.state {
+                        Text(message).font(.system(size: 11)).foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(tr("From your iCloud Drive", "З твого iCloud Drive", "Из твоего iCloud Drive"))
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: 0)
+                Button(updater.buttonTitle) { updater.install() }
+                    .buttonStyle(PillButtonStyle(prominent: true, tint: store.accent, compact: true))
+                    .disabled(updater.state == .installing)
+                    .fixedSize()
+            }
+        }
     }
 
     // MARK: Notices

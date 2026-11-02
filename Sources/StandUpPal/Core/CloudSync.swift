@@ -81,6 +81,7 @@ final class CloudSync: ObservableObject {
     /// Reads what the other Macs wrote, merges it in, then uploads this Mac's side.
     func refresh() {
         guard started else { return }
+        Updater.shared.check()
         guard store.syncState.enabled else { status = .off; return }
         guard let folder else { status = .unavailable; return }
         if inFlight { again = true; return }
