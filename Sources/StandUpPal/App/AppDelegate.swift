@@ -12,6 +12,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let popover = NSPopover()
     private let reminderPanel = ReminderPanelController()
     private let warmUp = WarmUpController()
+    private let eyeBreak = EyeBreakController()
+    private let weekly = WeeklyCardController()
+    private let desktopPet = DesktopPetController()
     private var settingsWindow: NSWindow?
     private var settingsHeight: CGFloat = 0
     private let settingsNavigation = SettingsNavigation()
@@ -48,6 +51,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self.reminderPanel.close()
         }
         scheduler.onRenudge = { [weak self] in self?.reminderPanel.nudge() }
+        scheduler.onEyeBreak = { [weak self] in self?.eyeBreak.show() }
+        scheduler.onWeekly = { [weak self] start in self?.openWeekly(start) }
+        store.$settings
+            .map(\.petWalks)
+            .removeDuplicates()
+            .sink { [weak self] on in
+                DispatchQueue.main.async { self?.desktopPet.setEnabled(on && !CommandLine.arguments.contains("--snapshot")) }
+            }
+            .store(in: &cancellables)
         // @Published fires before the value changes; hop to the next run-loop pass so the
         // icon reflects the finished tick.
         scheduler.$now
@@ -75,6 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         scheduler.start()
         CloudSync.shared.start()
+        store.checkAchievements()
         refreshStatusItem(force: true)
 
         if !store.runtime.hasOnboarded {
@@ -126,6 +139,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         actions.pause = { [weak self] minutes in self?.scheduler.pause(minutes: minutes) }
         actions.pauseUntilTomorrow = { [weak self] in self?.scheduler.pauseUntilTomorrow() }
         actions.resume = { [weak self] in self?.scheduler.resume() }
+        actions.showWeekly = { [weak self] in self?.openWeekly(WeeklySummary.weekStart(containing: Date())) }
+        actions.previewEyeBreak = { [weak self] in self?.eyeBreak.show(credit: false) }
         actions.petTapped = { [weak self] in
             guard let self else { return }
             self.store.showWelcome = false
@@ -146,6 +161,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func present(_ occurrence: Occurrence) {
         previewOccurrence = nil
+        eyeBreak.close()
         reminderPanel.show(occurrence: occurrence) { [weak self] action in
             self?.handle(action, for: occurrence)
         }
@@ -184,8 +200,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         reminderPanel.close()
     }
 
+    private func openWeekly(_ start: Date) {
+        popover.performClose(nil)
+        weekly.onClose = { [weak self] in
+            guard let self, self.settingsWindow?.isVisible != true, !self.warmUp.isOpen else { return }
+            NSApp.deactivate()
+        }
+        weekly.open(weekStart: start)
+    }
+
     private func openWarmUp(_ occurrence: Occurrence?) {
         popover.performClose(nil)
+        eyeBreak.close()
         if previewOccurrence != nil {
             previewOccurrence = nil
             reminderPanel.close()
@@ -376,6 +402,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.addItem(check(tr("Sound", "Звук", "Звук"), s.soundEnabled, #selector(menuToggleSound)))
         menu.addItem(check(tr("Pet", "Улюбленець", "Питомец"), s.petEnabled, #selector(menuTogglePet)))
         menu.addItem(check(tr("Show countdown", "Показувати відлік", "Показывать отсчёт"), s.showCountdown, #selector(menuToggleCountdown)))
+        menu.addItem(check(tr("Pet walks along the Dock", "Улюбленець гуляє над Dock", "Питомец гуляет над Dock"), s.petWalks,
+                           #selector(menuToggleWalks)))
+        menu.addItem(.separator())
+        let water = "\(store.today.water)/\(s.waterGoal)"
+        menu.addItem(item(tr("💧 A glass of water (\(water))", "💧 Склянка води (\(water))", "💧 Стакан воды (\(water))"), #selector(menuWater)))
 
         let paused = scheduler.isPaused(now)
         let until = Clock.time(store.runtime.pausedUntil ?? now)
@@ -440,6 +471,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func menuToggleSound() { store.settings.soundEnabled.toggle() }
     @objc private func menuTogglePet() { store.settings.petEnabled.toggle() }
     @objc private func menuToggleCountdown() { store.settings.showCountdown.toggle() }
+    @objc private func menuToggleWalks() { store.settings.petWalks.toggle() }
+    @objc private func menuWater() { store.logWater() }
     @objc private func menuResume() { scheduler.resume() }
     @objc private func menuQuit() { NSApp.terminate(nil) }
     @objc func menuOpenSettings() { openSettings() }
@@ -571,13 +604,18 @@ extension AppDelegate {
         s.petNeck = .medal
         s.soundEnabled = true
         store.settings = s
-        store.pet = PetState(xp: 1420, happiness: 92, totalStandups: 214, totalWarmUps: 131, totalExtras: 58, bestStreak: 9)
+        store.pet = PetState(xp: 1420, happiness: 92, totalStandups: 214, totalWarmUps: 131, totalExtras: 58, bestStreak: 9,
+                             totalWater: 96, totalEyeBreaks: 88)
         var stats: [String: DayStats] = [:]
         for (offset, done) in [6, 7, 6, 8, 6, 4, 6, 7, 5, 6, 8, 6, 3, 6].enumerated() {
             let day = Clock.addDays(-(offset + 1), to: Date())
             stats[Clock.dayKey(day)] = DayStats(standupsDone: done, warmUps: max(0, done - 2), extrasDone: done / 3, activeSeconds: done * 150)
         }
-        stats[store.todayKey] = DayStats(standupsDone: 5, warmUps: 4, snoozed: 1, extrasDone: 2, activeSeconds: 760)
+        stats[store.todayKey] = DayStats(standupsDone: 5, warmUps: 4, snoozed: 1, extrasDone: 2, activeSeconds: 760, water: 5, eyeBreaks: 4)
+        for key in stats.keys where key != store.todayKey {
+            stats[key]?.water = 6
+            stats[key]?.eyeBreaks = 5
+        }
         store.stats = stats
         store.runtime.hasOnboarded = true
         store.showWelcome = false
@@ -643,6 +681,16 @@ extension AppDelegate {
                     shot(reminderPanel.contentView, "\(prefix)3-extra-card")
                     handle(.skip, for: previewOccurrence ?? Occurrence(id: "preview-y", kind: .custom(first.id), scheduled: Date(), due: Date(), isPreview: true))
                 }
+
+                eyeBreak.show(credit: false)
+                await wait(1.0)
+                shot(eyeBreak.contentView, "\(prefix)3b-eye-break")
+                eyeBreak.close()
+
+                openWeekly(WeeklySummary.weekStart(containing: Date()))
+                await wait(1.2)
+                shot(weekly.contentView, "\(prefix)3c-weekly-card")
+                weekly.close()
 
                 openWarmUp(nil)
                 await wait(1.2)

@@ -71,7 +71,13 @@ Stand-ups and warm-ups earn XP. Levels unlock gear, one item per slot, to mix an
 | Hands | Water bottle (2) · Dumbbells (5) · Kettlebell (8) · Trophy (15) |
 | Neck | Towel (4) · Whistle (7) · Medal (10) |
 
-Plus a daily goal, streaks (days off never break one), happiness and a 14-day chart.
+Plus a daily goal, streaks (days off never break one), happiness, a 14-day chart and **18 achievements** to collect.
+
+### 💧 Small healthy habits
+- **Water:** tap + in the popover after each glass (goal 8 by default), or let a reminder count glasses.
+- **Eye breaks (20-20-20):** every 30 minutes a small, silent card asks you to look into the distance for 20 seconds while the pet does the same. It never shows during a call or right before a stand-up.
+- **Weekly card:** on Friday after work you get a card with your week (stand-ups, warm-ups, minutes, water, streak), ready to copy or save as a PNG and post.
+- **Walking pet:** let the pet stroll along the top of your Dock. It naps after work and hops when it's time to stand up.
 
 ### 🧠 Smart, not naggy
 - **Already away?** No keyboard or mouse for 5+ minutes when a stand-up is due counts as done, and stays quiet.
@@ -135,7 +141,7 @@ Run `scripts/make-signing-cert.sh` once. It creates a personal code-signing cert
 
 - **Click** the pet in the menu bar: countdown, today's progress, upcoming extras, and the **Sound** / **Pet** checkboxes.
 - **Right-click** it: start a warm-up, toggle Sound/Pet/countdown, pause (30 min, 1 h, 2 h, until tomorrow), language, Settings, Quit.
-- **Settings** has seven tabs (General, Reminders, Warm-up, Pet, Gear, Stats, About). None of them scrolls: the window resizes to fit each tab.
+- **Settings** has eight tabs (General, Reminders, Warm-up, Habits, Pet, Gear, Stats, About). None of them scrolls: the window resizes to fit each tab.
 - Tap your pet. It likes that.
 
 <details>
@@ -169,7 +175,7 @@ Sources/StandUpPal/
 
 ```bash
 swift build          # debug build
-scripts/test.sh      # 36 tests: scheduling, live ticks, flows, persistence, routines, languages, palettes, gear, iCloud sync
+scripts/test.sh      # 52 tests: scheduling, live ticks, flows, persistence, routines, languages, palettes, gear, sync, updates, programs, habits
 ```
 
 Handy flags for the built binary:

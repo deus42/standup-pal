@@ -174,6 +174,43 @@ final class AppStore: ObservableObject {
         SoundPlayer.shared.play(.levelUp)
     }
 
+    // MARK: Habits
+
+    /// A glass of water (or one less, to fix a mis-tap).
+    func logWater(_ delta: Int = 1) {
+        guard delta > 0 || today.water > 0 else { return }
+        updateToday { $0.water = max(0, $0.water + delta) }
+        pet.totalWater = max(0, pet.totalWater + delta)
+        if delta > 0 {
+            award(xp: 2, happiness: 2)
+            react(.happy, for: 2.5)
+            SoundPlayer.shared.play(.boop)
+        }
+        checkAchievements()
+    }
+
+    var achievementContext: AchievementContext {
+        AchievementContext(pet: pet, stats: stats, dailyGoal: settings.dailyGoal, streak: currentStreak())
+    }
+
+    /// Announces achievements reached since last time, once per Mac. On the first run it
+    /// quietly marks what was already earned.
+    func checkAchievements() {
+        let unlocked = AchievementCatalog.unlocked(in: achievementContext)
+        guard runtime.achievementsPrimed else {
+            runtime.seenAchievements = unlocked
+            runtime.achievementsPrimed = true
+            return
+        }
+        let fresh = AchievementCatalog.all.filter { unlocked.contains($0.id) && !runtime.seenAchievements.contains($0.id) }
+        guard !fresh.isEmpty else { return }
+        runtime.seenAchievements.formUnion(fresh.map(\.id))
+        let names = fresh.map { "\($0.emoji) \($0.title)" }.joined(separator: ", ")
+        toast = Toast(title: tr("New achievement!", "Нове досягнення!", "Новое достижение!"), message: names)
+        react(.celebrate, for: 6)
+        SoundPlayer.shared.play(.levelUp)
+    }
+
     /// Consecutive days meeting the daily goal. Non-work days never break a streak.
     func currentStreak(now: Date = Date()) -> Int {
         let goal = max(1, settings.dailyGoal)

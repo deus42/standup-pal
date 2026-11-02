@@ -173,7 +173,15 @@ struct ReminderEditor: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 Divider().padding(.leading, 12)
-                SettingsToggle(title: tr("Enabled", "Увімкнено", "Включено"), isOn: $reminder.isEnabled, divider: false)
+                HStack(spacing: 18) {
+                    Toggle(tr("Enabled", "Увімкнено", "Включено"), isOn: $reminder.isEnabled)
+                    Toggle(tr("Counts a glass of water", "Рахує склянку води", "Засчитывает стакан воды"), isOn: $reminder.tracksWater)
+                    Spacer(minLength: 0)
+                }
+                .toggleStyle(.checkbox)
+                .font(.system(size: 13))
+                .padding(.horizontal, 12)
+                .frame(minHeight: 36)
             }
 
             Picker("", selection: $pane) {

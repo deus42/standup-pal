@@ -4,6 +4,8 @@ import Foundation
 enum ExerciseMotion: String, CaseIterable {
     case reach, march, neck, shoulders, armCircles, chest, twist, sideBend, hips, calves, squat, hinge, wrists, shake
     case eyes, breathe, chinTuck, bladeSqueeze, backBend, ankles, wallPush, rest, generic
+    /// Not an exercise: the desktop pet strolling.
+    case walk
 
     init(exerciseID: String) {
         switch exerciseID {

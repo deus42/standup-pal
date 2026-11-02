@@ -1,13 +1,14 @@
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable {
-    case general, reminders, warmUp, pet, gear, stats, about
+    case general, reminders, warmUp, habits, pet, gear, stats, about
 
     var title: String {
         switch self {
         case .general: return tr("General", "Загальні", "Основные")
         case .reminders: return tr("Reminders", "Нагадування", "Напоминания")
         case .warmUp: return tr("Warm-up", "Розминка", "Разминка")
+        case .habits: return tr("Habits", "Звички", "Привычки")
         case .pet: return tr("Pet", "Улюбленець", "Питомец")
         case .gear: return tr("Gear", "Спорядження", "Снаряжение")
         case .stats: return tr("Stats", "Статистика", "Статистика")
@@ -20,6 +21,7 @@ enum SettingsTab: String, CaseIterable {
         case .general: return "gearshape.fill"
         case .reminders: return "bell.badge.fill"
         case .warmUp: return "figure.cooldown"
+        case .habits: return "drop.fill"
         case .pet: return "pawprint.fill"
         case .gear: return "dumbbell.fill"
         case .stats: return "chart.bar.fill"
@@ -81,7 +83,7 @@ struct SettingsView: View {
                             .foregroundStyle(selected ? Color.primary : Color.secondary)
                             .lineLimit(1)
                     }
-                    .frame(width: 92)
+                    .frame(width: 84)
                     .padding(.vertical, 4)
                     .contentShape(Rectangle())
                 }
@@ -98,9 +100,10 @@ struct SettingsView: View {
         case .general: GeneralSettings()
         case .reminders: RemindersSettings(actions: actions)
         case .warmUp: WarmUpSettings()
+        case .habits: HabitsSettings(actions: actions)
         case .pet: PetSettings()
         case .gear: GearSettings()
-        case .stats: StatsSettings()
+        case .stats: StatsSettings(actions: actions)
         case .about: AboutSettings(actions: actions)
         }
     }

@@ -228,6 +228,13 @@ struct AppSettings: Codable, Equatable {
     var petHands: HandGear = .none
     var petNeck: NeckGear = .none
 
+    // Habits
+    var waterGoal = 8
+    var eyeBreaksEnabled = true
+    var eyeBreakMinutes = 30
+    var weeklySummary = true
+    var petWalks = false
+
     // Warm-up
     var warmUpLength: WarmUpLength = .standard
     var speakExercises = false
@@ -276,6 +283,11 @@ extension AppSettings {
         }
         petHands = c.value(.petHands, petHands)
         petNeck = c.value(.petNeck, petNeck)
+        waterGoal = c.value(.waterGoal, waterGoal)
+        eyeBreaksEnabled = c.value(.eyeBreaksEnabled, eyeBreaksEnabled)
+        eyeBreakMinutes = c.value(.eyeBreakMinutes, eyeBreakMinutes)
+        weeklySummary = c.value(.weeklySummary, weeklySummary)
+        petWalks = c.value(.petWalks, petWalks)
         warmUpLength = c.value(.warmUpLength, warmUpLength)
         speakExercises = c.value(.speakExercises, speakExercises)
         getReadyCountdown = c.value(.getReadyCountdown, getReadyCountdown)

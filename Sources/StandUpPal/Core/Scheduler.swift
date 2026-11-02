@@ -37,6 +37,9 @@ final class Scheduler: ObservableObject {
     var onPresent: ((Occurrence) -> Void)?
     var onDismiss: (() -> Void)?
     var onRenudge: (() -> Void)?
+    var onEyeBreak: (() -> Void)?
+    /// The start of the week whose summary card should open.
+    var onWeekly: ((Date) -> Void)?
 
     private let store = AppStore.shared
     private var timer: Timer?
@@ -67,6 +70,11 @@ final class Scheduler: ObservableObject {
 
         for occ in occurrences(on: now) where occ.due <= now && !store.runtime.firedIDs.contains(occ.id) {
             store.runtime.firedIDs.insert(occ.id)
+            if occ.isEyeBreak {
+                // Small and optional: only on time, and only when nothing else is going on.
+                if now.timeIntervalSince(occ.due) <= 90, !paused { offerEyeBreak() }
+                continue
+            }
             guard now.timeIntervalSince(occ.due) <= Self.graceSeconds, !paused else { continue }
             if occ.isStandup, store.settings.smartAway, Presence.idleSeconds() >= Self.awaySeconds {
                 // Already away from the desk: that's a stand-up in spirit.
@@ -85,6 +93,7 @@ final class Scheduler: ObservableObject {
         presentIfPossible(now)
         housekeepActive(now)
         refreshUpcoming(now)
+        checkWeekly(now)
 
         if let toast = store.toast, toast.expires < now { store.toast = nil }
         if store.reaction != nil, store.reactionUntil < now { store.reaction = nil }
@@ -104,6 +113,33 @@ final class Scheduler: ObservableObject {
         let cutoff = Clock.dayKey(Clock.addDays(-180, to: now))
         store.stats = store.stats.filter { $0.key >= cutoff }
         store.pet.bestStreak = max(store.pet.bestStreak, store.currentStreak(now: now))
+    }
+
+    private func offerEyeBreak() {
+        guard active == nil, queue.isEmpty, !isWarmUpRunning else { return }
+        // Away from the screen already: the eyes are resting.
+        guard Presence.idleSeconds() < Self.awaySeconds else { return }
+        if store.settings.holdDuringCalls, Presence.callReason() != nil { return }
+        onEyeBreak?()
+    }
+
+    /// The eye break ran its 20 seconds.
+    func completeEyeBreak() {
+        store.updateToday { $0.eyeBreaks += 1 }
+        store.pet.totalEyeBreaks += 1
+        store.award(xp: 2, happiness: 1)
+        afterProgress()
+    }
+
+    private func checkWeekly(_ now: Date) {
+        guard store.settings.weeklySummary, active == nil, !isWarmUpRunning else { return }
+        let start = WeeklySummary.dueWeekStart(now: now, settings: store.settings)
+        let key = Clock.dayKey(start)
+        guard store.runtime.weeklyShownKey != key else { return }
+        let summary = WeeklySummary.make(weekStart: start, stats: store.stats, dailyGoal: store.settings.dailyGoal)
+        guard summary.standups > 0 else { return }
+        store.runtime.weeklyShownKey = key
+        onWeekly?(start)
     }
 
     private func enqueue(_ occ: Occurrence) {
@@ -173,6 +209,7 @@ final class Scheduler: ObservableObject {
                 store.updateToday { $0.extrasDone += 1 }
                 store.pet.totalExtras += 1
                 store.award(xp: 10, happiness: 4)
+                if reminder(for: occ)?.tracksWater == true { store.logWater() }
             }
             store.react(.happy, for: 5)
             SoundPlayer.shared.play(.success)
@@ -302,6 +339,7 @@ final class Scheduler: ObservableObject {
             }
         }
         store.pet.bestStreak = max(store.pet.bestStreak, store.currentStreak())
+        store.checkAchievements()
         refreshUpcoming(Date())
     }
 
@@ -329,6 +367,18 @@ final class Scheduler: ObservableObject {
         }
     }
 
+    /// 20-20-20 breaks on the clock (every N minutes), never within 5 minutes of a
+    /// stand-up and never during lunch.
+    static func eyeBreakMinutes(_ s: AppSettings) -> [Int] {
+        let step = max(15, s.eyeBreakMinutes)
+        let standups = standupMinutes(s)
+        guard s.workEndMinute > s.workStartMinute else { return [] }
+        return (s.workStartMinute + 1..<s.workEndMinute).filter { m in
+            let inLunch = s.lunchEnabled && m >= s.lunchStartMinute && m < s.lunchEndMinute
+            return m % step == 0 && !inLunch && !standups.contains { abs($0 - m) <= 5 }
+        }
+    }
+
     func occurrences(on day: Date) -> [Occurrence] {
         let s = store.settings
         let key = Clock.dayKey(day)
@@ -338,6 +388,12 @@ final class Scheduler: ObservableObject {
             for m in Self.standupMinutes(s) {
                 let date = Clock.date(on: day, minute: m)
                 list.append(Occurrence(id: "standup@\(key)T\(m)", kind: .standup, scheduled: date, due: date))
+            }
+        }
+        if s.eyeBreaksEnabled, s.workDays.contains(weekday) {
+            for m in Self.eyeBreakMinutes(s) {
+                let date = Clock.date(on: day, minute: m)
+                list.append(Occurrence(id: "eyes@\(key)T\(m)", kind: .eyeBreak, scheduled: date, due: date))
             }
         }
         for reminder in store.reminders where reminder.isEnabled && reminder.weekdays.contains(weekday) {

@@ -20,6 +20,8 @@ struct CustomReminder: Codable, Identifiable, Equatable {
     var weekdays: Set<Int> = [2, 3, 4, 5, 6]
     /// A guided routine to run when the reminder pops up (e.g. physiotherapy).
     var program: ReminderProgram? = nil
+    /// Marking it done also counts a glass of water.
+    var tracksWater = false
 
     var hasProgram: Bool { !(program?.steps.isEmpty ?? true) }
 
@@ -68,7 +70,8 @@ struct CustomReminder: Codable, Identifiable, Equatable {
             CustomReminder(title: templates[0].title.current, emoji: "💪", note: templates[0].note.current,
                            isEnabled: true, mode: .times, times: [11 * 60 + 30, 16 * 60 + 30]),
             CustomReminder(title: templates[1].title.current, emoji: "💧", note: templates[1].note.current,
-                           isEnabled: false, mode: .interval, intervalMinutes: 120, startMinute: 10 * 60, endMinute: 18 * 60),
+                           isEnabled: false, mode: .interval, intervalMinutes: 120, startMinute: 10 * 60, endMinute: 18 * 60,
+                           tracksWater: true),
             CustomReminder(title: templates[2].title.current, emoji: "🚶", note: templates[2].note.current,
                            isEnabled: false, mode: .times, times: [14 * 60 + 30]),
         ]
@@ -106,6 +109,7 @@ extension CustomReminder {
         endMinute = c.value(.endMinute, endMinute)
         weekdays = c.value(.weekdays, weekdays)
         program = c.value(.program, nil)
+        tracksWater = c.value(.tracksWater, false)
     }
 }
 
@@ -185,6 +189,8 @@ enum ProgramPreset: String, CaseIterable, Identifiable {
 enum ReminderKind: Codable, Hashable {
     case standup
     case custom(UUID)
+    /// A 20-second look into the distance (20-20-20).
+    case eyeBreak
 }
 
 /// One concrete firing of a reminder.
@@ -205,4 +211,6 @@ struct Occurrence: Codable, Identifiable, Hashable {
         if case .custom(let id) = kind { return id }
         return nil
     }
+
+    var isEyeBreak: Bool { kind == .eyeBreak }
 }

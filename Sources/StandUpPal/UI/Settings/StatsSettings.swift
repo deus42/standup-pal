@@ -3,6 +3,7 @@ import SwiftUI
 
 struct StatsSettings: View {
     @EnvironmentObject var store: AppStore
+    let actions: AppActions
 
     private struct DayPoint: Identifiable {
         let id: String
@@ -54,43 +55,55 @@ struct StatsSettings: View {
                 .padding(14)
             }
 
-            SettingsGroup(title: tr("Today in detail", "Сьогодні докладно", "Сегодня подробно")) {
-                Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
-                    detailRow(tr("Stand-ups done", "Перерв зроблено", "Перерывов сделано"), today.standupsDone,
-                              tr("…with a full warm-up", "…з повною розминкою", "…с полной разминкой"), today.warmUps)
-                    Divider()
-                    detailRow(tr("Extra exercises done", "Додаткових вправ", "Дополнительных упражнений"), today.extrasDone,
-                              tr("Snoozed", "Відкладено", "Отложено"), today.snoozed)
-                    Divider()
-                    detailRow(tr("Skipped", "Пропущено", "Пропущено"), today.skipped + today.extrasSkipped,
-                              tr("Auto-skipped while away", "Автопропуск (тебе не було)", "Автопропуск (тебя не было)"), today.away)
-                    Divider()
-                    detailRow(tr("Ignored", "Проігноровано", "Проигнорировано"), today.missed, nil, nil)
+            SettingsGroup(title: tr("Achievements", "Досягнення", "Достижения") + " · \(unlockedCount)/\(AchievementCatalog.all.count)") {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 9), spacing: 8) {
+                    ForEach(AchievementCatalog.all) { achievement in
+                        badge(achievement)
+                    }
                 }
+                .padding(10)
+            }
+
+            HStack(spacing: 12) {
+                Text(todayLine(today))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Button(tr("Week card", "Картка тижня", "Карточка недели")) { actions.showWeekly() }
+                    .buttonStyle(PillButtonStyle(compact: true))
+                    .fixedSize()
             }
         }
     }
 
-    private func detailRow(_ a: String, _ av: Int, _ b: String?, _ bv: Int?) -> some View {
-        GridRow {
-            cell(a, av)
-            if let b, let bv {
-                cell(b, bv)
-            } else {
-                Color.clear.frame(height: 1)
-            }
-        }
-    }
+    private var unlockedCount: Int { AchievementCatalog.unlocked(in: store.achievementContext).count }
 
-    private func cell(_ title: String, _ value: Int) -> some View {
-        HStack {
-            Text(title).font(.system(size: 13))
-            Spacer(minLength: 8)
-            Text("\(value)").font(.system(size: 13, weight: .semibold)).monospacedDigit()
+    private func badge(_ achievement: Achievement) -> some View {
+        let context = store.achievementContext
+        let unlocked = achievement.isUnlocked(context)
+        return VStack(spacing: 3) {
+            Text(achievement.emoji)
+                .font(.system(size: 22))
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(unlocked ? store.petColor.opacity(0.35) : Color.primary.opacity(0.05)))
+                .overlay(Circle().strokeBorder(unlocked ? store.accent : Color.clear, lineWidth: 1.5))
+                .grayscale(unlocked ? 0 : 1)
+                .opacity(unlocked ? 1 : 0.4)
+            Text(achievement.title)
+                .font(.system(size: 9.5, weight: unlocked ? .semibold : .regular))
+                .foregroundStyle(unlocked ? Color.primary : Color.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
-        .padding(.horizontal, 12)
-        .frame(minHeight: 34)
         .frame(maxWidth: .infinity)
+        .help("\(achievement.title): \(achievement.detail) · \(achievement.progress(context))/\(achievement.target)")
+    }
+
+    private func todayLine(_ today: DayStats) -> String {
+        tr("Today: \(today.warmUps) warm-ups · \(today.extrasDone) extras · \(today.water) 💧 · \(today.eyeBreaks) 👀 · \(today.snoozed) snoozed · \(today.skipped + today.extrasSkipped) skipped",
+           "Сьогодні: розминок \(today.warmUps) · додаткових \(today.extrasDone) · \(today.water) 💧 · \(today.eyeBreaks) 👀 · відкладено \(today.snoozed) · пропущено \(today.skipped + today.extrasSkipped)",
+           "Сегодня: разминок \(today.warmUps) · дополнительных \(today.extrasDone) · \(today.water) 💧 · \(today.eyeBreaks) 👀 · отложено \(today.snoozed) · пропущено \(today.skipped + today.extrasSkipped)")
     }
 
     private var streakText: String {

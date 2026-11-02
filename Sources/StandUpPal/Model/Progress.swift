@@ -8,6 +8,8 @@ struct PetState: Codable, Equatable {
     var totalWarmUps = 0
     var totalExtras = 0
     var bestStreak = 0
+    var totalWater = 0
+    var totalEyeBreaks = 0
 
     var level: Int { Self.levelInfo(xp: xp).level }
 
@@ -35,6 +37,8 @@ extension PetState {
         totalWarmUps = c.value(.totalWarmUps, totalWarmUps)
         totalExtras = c.value(.totalExtras, totalExtras)
         bestStreak = c.value(.bestStreak, bestStreak)
+        totalWater = c.value(.totalWater, totalWater)
+        totalEyeBreaks = c.value(.totalEyeBreaks, totalEyeBreaks)
     }
 }
 
@@ -48,6 +52,8 @@ struct DayStats: Codable, Equatable {
     var extrasDone = 0
     var extrasSkipped = 0
     var activeSeconds = 0
+    var water = 0
+    var eyeBreaks = 0
 }
 
 extension DayStats {
@@ -63,6 +69,8 @@ extension DayStats {
         extrasDone = c.value(.extrasDone, 0)
         extrasSkipped = c.value(.extrasSkipped, 0)
         activeSeconds = c.value(.activeSeconds, 0)
+        water = c.value(.water, 0)
+        eyeBreaks = c.value(.eyeBreaks, 0)
     }
 }
 
@@ -74,6 +82,11 @@ struct RuntimeState: Codable, Equatable {
     var pausedUntil: Date?
     var hasOnboarded = false
     var goalToastDay = ""
+    /// Achievements already announced on this Mac.
+    var seenAchievements: Set<String> = []
+    var achievementsPrimed = false
+    /// Start of the last week whose summary card was shown.
+    var weeklyShownKey = ""
 }
 
 extension RuntimeState {
@@ -86,6 +99,9 @@ extension RuntimeState {
         pausedUntil = c.value(.pausedUntil, nil)
         hasOnboarded = c.value(.hasOnboarded, false)
         goalToastDay = c.value(.goalToastDay, "")
+        seenAchievements = c.value(.seenAchievements, [])
+        achievementsPrimed = c.value(.achievementsPrimed, false)
+        weeklyShownKey = c.value(.weeklyShownKey, "")
     }
 }
 

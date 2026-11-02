@@ -13,6 +13,8 @@ final class AppActions {
     var pause: (Int) -> Void = { _ in }
     var pauseUntilTomorrow: () -> Void = {}
     var resume: () -> Void = {}
+    var showWeekly: () -> Void = {}
+    var previewEyeBreak: () -> Void = {}
 }
 
 struct PopoverView: View {
@@ -205,6 +207,7 @@ struct PopoverView: View {
         let info = PetState.levelInfo(xp: store.pet.xp)
         let streak = store.currentStreak()
         return VStack(spacing: 8) {
+            waterRow
             HStack(spacing: 8) {
                 StatTile(title: tr("Today", "Сьогодні", "Сегодня"), value: "\(today.standupsDone)/\(goal)")
                 StatTile(title: tr("Streak", "Серія", "Серия"), value: streak > 0 ? "\(streak) 🔥" : "0")
@@ -231,6 +234,30 @@ struct PopoverView: View {
                 }
             }
         }
+    }
+
+    private var waterRow: some View {
+        let water = store.today.water
+        return HStack(spacing: 8) {
+            Text("💧").font(.system(size: 13))
+            WaterDrops(count: water, goal: store.settings.waterGoal)
+            Text("\(water)/\(store.settings.waterGoal)")
+                .font(.system(size: 11.5, weight: .medium))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+            Button { store.logWater(-1) } label: { Image(systemName: "minus.circle") }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .disabled(water == 0)
+                .help(tr("One less", "На одну менше", "На один меньше"))
+            Button { store.logWater() } label: { Image(systemName: "plus.circle.fill").font(.system(size: 15)) }
+                .buttonStyle(.borderless)
+                .foregroundStyle(Color(hex: "#4FA3E0"))
+                .help(tr("A glass of water", "Склянка води", "Стакан воды"))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.045)))
     }
 
     private var moodEmoji: String {

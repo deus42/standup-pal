@@ -171,6 +171,16 @@ struct PetPainter {
 
     private func pose(back: Bool) -> Pose {
         var p = Pose()
+        if motion == .walk, mood == .idle || mood == .sad {
+            let s = sin(t * 7)
+            p.footL = max(0, s) * 4
+            p.footR = max(0, -s) * 4
+            p.lift = abs(s) * 1.5
+            p.tilt = sin(t * 3.5) * 2
+            p.armL = 26 + s * 14
+            p.armR = 26 - s * 14
+            return p
+        }
         switch mood {
         case .idle:
             let b = sin(t * 2.0)
@@ -241,7 +251,7 @@ struct PetPainter {
             p.armL = 168 + s * 6
             p.armR = 168 - s * 6
             p.gazeY = -1.5
-        case .march:
+        case .march, .walk:
             let s = sin(t * 6)
             p.footL = max(0, s) * 6
             p.footR = max(0, -s) * 6

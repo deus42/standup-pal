@@ -59,7 +59,7 @@ struct SchedulingTests {
         let occurrences = Scheduler.shared.occurrences(on: monday)
         #expect(occurrences.filter(\.isStandup).count == 9)
         // Only "10 push-ups" is enabled by default: 11:30 and 16:30.
-        let extras = occurrences.filter { !$0.isStandup }
+        let extras = occurrences.filter { $0.customID != nil }
         #expect(extras.map { Clock.minuteOfDay($0.due) } == [hm(11, 30), hm(16, 30)])
         #expect(Set(occurrences.map(\.id)).count == occurrences.count)
 
