@@ -74,7 +74,7 @@ done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 
 SIGN_NAME="StandUp Pal Local Signing"
-SIGN_ID="$(security find-certificate -c "$SIGN_NAME" -Z 2>/dev/null | awk '/SHA-1/{print $NF; exit}')"
+SIGN_ID="$( (security find-certificate -c "$SIGN_NAME" -Z 2>/dev/null || true) | awk '/SHA-1/{print $NF; exit}')"
 if [[ -n "$SIGN_ID" ]]; then
   echo "→ Signing ($SIGN_NAME)…"
   codesign --force --deep --sign "$SIGN_ID" --timestamp=none "$APP" >/dev/null

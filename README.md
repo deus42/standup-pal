@@ -40,12 +40,14 @@ It's a native macOS app: a few megabytes of Swift, no Electron, no accounts, no 
 
 ### 🤸 Guided warm-ups
 - 2, 3 or 5 minutes: an energising opener, a shuffled middle, a calm closer (breathing or an eye break).
-- 16 built-in desk-friendly exercises. Switch any of them off, or **add your own**.
+- 21 built-in desk-friendly exercises, including physio favourites like chin tucks, shoulder-blade squeezes and desk push-ups. Switch any of them off, or **add your own**.
+- The pet **demonstrates every move**: it reaches, marches, twists, side-bends, squats and breathes along with you.
 - Countdown ring, "up next" preview, pause/skip/end, optional spoken exercise names, and confetti at the end.
 
 ### 💪 Your own exercise reminders
 - Push-ups, water, a walk, anything: pick an emoji and a note, set times ("11:30 and 16:30") or an interval ("every 2 h, 10:00–18:00"), and the days.
 - When one pops up: **Done**, **+1 hour**, **+2 hours** or **Skip**.
+- Give a reminder a **program** (say, your physiotherapy): pick exercises, durations, sets and rest, or start from a ready-made one (neck & shoulders, lower back, wrists & eyes, legs). When it pops up, **Start the program** runs it with a timer.
 
 ### 🐾 Fourteen fitness pets
 Blob the gym buddy, Kitty the yoga master, Bear the powerlifter, Penguin the swimmer, Chick the coach, Axolotl on aqua aerobics, Dino the cardio-saurus… and **Booty**, the squat pro, who looks just like Blob until it turns round to wiggle its peachy behind. 🍑

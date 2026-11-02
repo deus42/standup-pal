@@ -10,6 +10,9 @@ final class WarmUpSession: ObservableObject {
     }
 
     let routine: [Exercise]
+    /// Shown in the header; a reminder's program carries the reminder's name.
+    let title: String
+    let isProgram: Bool
     let occurrence: Occurrence?
 
     @Published private(set) var phase: Phase
@@ -27,8 +30,10 @@ final class WarmUpSession: ObservableObject {
     private var lastTick = Date()
     private let speech = AVSpeechSynthesizer()
 
-    init(routine: [Exercise], occurrence: Occurrence?, getReady: Bool) {
+    init(routine: [Exercise], occurrence: Occurrence?, getReady: Bool, title: String? = nil) {
         self.routine = routine.isEmpty ? Array(ExerciseLibrary.builtIn.prefix(1)) : routine
+        self.title = title ?? tr("Warm-up", "Розминка", "Разминка")
+        isProgram = title != nil
         self.occurrence = occurrence
         phase = getReady ? .getReady : .exercising
         remaining = Double(self.routine[0].seconds)
@@ -142,16 +147,18 @@ final class WarmUpController: NSObject, NSWindowDelegate {
         session?.finish()
     }
 
-    func open(occurrence: Occurrence?) {
+    func open(occurrence: Occurrence?, routine program: [Exercise]? = nil, title: String? = nil) {
         if let window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
         let store = AppStore.shared
-        let routine = ExerciseLibrary.routine(totalSeconds: store.settings.warmUpLength.rawValue, settings: store.settings)
-        let session = WarmUpSession(routine: routine, occurrence: occurrence, getReady: store.settings.getReadyCountdown)
+        let routine = program ?? ExerciseLibrary.routine(totalSeconds: store.settings.warmUpLength.rawValue, settings: store.settings)
+        let session = WarmUpSession(routine: routine, occurrence: occurrence, getReady: store.settings.getReadyCountdown, title: title)
         session.onComplete = { session in
+            // Previews from Settings are for trying things out: no XP.
+            guard session.occurrence?.isPreview != true else { return }
             session.rewardXP = Scheduler.shared.completeWarmUp(for: session.occurrence, seconds: session.elapsed,
                                                                 full: session.completedFully)
         }
@@ -192,7 +199,9 @@ final class WarmUpController: NSObject, NSWindowDelegate {
             session.stop()
             if session.phase != .finished {
                 // Closed early: still credit real effort.
-                if session.elapsed >= 45 {
+                if session.occurrence?.isPreview == true {
+                    // Nothing to credit for a preview.
+                } else if session.elapsed >= 45 {
                     Scheduler.shared.completeWarmUp(for: session.occurrence, seconds: session.elapsed, full: false)
                 } else if let occ = session.occurrence {
                     Scheduler.shared.resolve(occ, .stoodUp)
@@ -265,7 +274,7 @@ struct WarmUpView: View {
         let exercise = session.current
         return VStack(spacing: 14) {
             HStack {
-                Text(tr("Warm-up", "Розминка", "Разминка")).font(.system(size: 14, weight: .bold, design: .rounded))
+                Text(session.title).font(.system(size: 14, weight: .bold, design: .rounded)).lineLimit(1)
                 Spacer()
                 Text(tr("\(session.index + 1) of \(session.routine.count)", "\(session.index + 1) з \(session.routine.count)",
                         "\(session.index + 1) из \(session.routine.count)"))
@@ -289,7 +298,8 @@ struct WarmUpView: View {
             ZStack {
                 ProgressRing(progress: session.stepProgress, lineWidth: 12, tint: store.accent)
                 if store.settings.petEnabled {
-                    PetView(look: store.petLook, mood: session.isPaused ? .idle : .exercise)
+                    PetView(look: store.petLook, mood: session.isPaused ? .idle : .exercise,
+                            motion: ExerciseMotion(exerciseID: exercise.id))
                         .frame(width: 150, height: 150)
                 } else {
                     Text(exercise.emoji).font(.system(size: 84))
@@ -386,7 +396,9 @@ struct WarmUpView: View {
                 } else {
                     Text("🎉").font(.system(size: 90))
                 }
-                Text(session.completedFully ? tr("Warm-up complete!", "Розминку завершено!", "Разминка завершена!")
+                Text(session.completedFully
+                     ? (session.isProgram ? tr("Program complete!", "Програму завершено!", "Программа завершена!")
+                                          : tr("Warm-up complete!", "Розминку завершено!", "Разминка завершена!"))
                                             : tr("Nice, every bit counts!", "Супер, кожна хвилина рахується!", "Супер, каждая минута на счету!"))
                     .font(.system(size: 25, weight: .heavy, design: .rounded))
                 Text(movedLabel(minutes: minutes, seconds: seconds))

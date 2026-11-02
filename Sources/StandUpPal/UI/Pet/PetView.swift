@@ -8,10 +8,11 @@ struct PetCanvas: View {
     var t: Double
     var effects = true
     var zoom = 1.0
+    var motion: ExerciseMotion? = nil
 
     var body: some View {
         Canvas { context, size in
-            PetPainter(look: look, mood: mood, t: t, effects: effects, zoom: zoom).draw(&context, size: size)
+            PetPainter(look: look, mood: mood, t: t, effects: effects, zoom: zoom, motion: motion).draw(&context, size: size)
         }
     }
 }
@@ -22,12 +23,13 @@ struct PetView: View {
     var mood: PetMood
     var animated = true
     var effects = true
+    var motion: ExerciseMotion? = nil
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !animated)) { timeline in
             PetCanvas(look: look, mood: mood,
                       t: timeline.date.timeIntervalSince1970.truncatingRemainder(dividingBy: 86_400),
-                      effects: effects)
+                      effects: effects, motion: motion)
         }
         .aspectRatio(1, contentMode: .fit)
         .accessibilityLabel(tr("Your pet: \(mood.label)", "Твій улюбленець: \(mood.label)", "Твой питомец: \(mood.label)"))

@@ -220,6 +220,22 @@ final class Scheduler: ObservableObject {
     @discardableResult
     func completeWarmUp(for occ: Occurrence?, seconds: Double, full: Bool) -> Int {
         let now = Date()
+        if let occ, occ.customID != nil {
+            // A reminder's own program: counts as that extra, not as a stand-up.
+            if active?.id == occ.id { clearActive() }
+            queue.removeAll { $0.id == occ.id }
+            store.runtime.snoozed.removeAll { $0.id == occ.id }
+            let xp = full ? 20 : 12
+            store.updateToday {
+                $0.extrasDone += 1
+                $0.activeSeconds += Int(seconds)
+            }
+            store.pet.totalExtras += 1
+            store.award(xp: xp, happiness: full ? 8 : 5)
+            store.react(.celebrate, for: 8)
+            afterProgress()
+            return xp
+        }
         if let occ {
             queue.removeAll { $0.id == occ.id }
             store.runtime.snoozed.removeAll { $0.id == occ.id }

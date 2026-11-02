@@ -241,6 +241,22 @@ struct ReminderCardView: View {
                 }
                 .buttonStyle(PillButtonStyle(compact: true))
             }
+        } else if let program = reminder?.program, reminder?.hasProgram == true {
+            let length = Clock.minutesLabel(Double(program.totalSeconds))
+            VStack(alignment: .leading, spacing: 6) {
+                Button { onAction(.warmUp) } label: {
+                    Label(tr("Start the program · \(length)", "Почати програму · \(length)", "Начать программу · \(length)"),
+                          systemImage: "play.fill")
+                }
+                .buttonStyle(PillButtonStyle(prominent: true, tint: store.accent))
+                // Skip stays on the ✕ in the corner so the row fits.
+                HStack(spacing: 6) {
+                    Button { onAction(.done) } label: { Label(tr("Done!", "Готово!", "Готово!"), systemImage: "checkmark") }
+                    Button(tr("+1 hour", "+1 година", "+1 час")) { onAction(.snooze(60)) }
+                    Button(tr("+2 hours", "+2 години", "+2 часа")) { onAction(.snooze(120)) }
+                }
+                .buttonStyle(PillButtonStyle(compact: true))
+            }
         } else {
             VStack(alignment: .leading, spacing: 6) {
                 Button { onAction(.done) } label: { Label(tr("Done!", "Готово!", "Готово!"), systemImage: "checkmark") }

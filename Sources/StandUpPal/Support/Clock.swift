@@ -149,3 +149,7 @@ enum Clock {
         return orderedWeekdays.filter { days.contains($0) }.map { shortWeekdaySymbol($0) }.joined(separator: " ")
     }
 }
+
+extension Array {
+    subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
+}

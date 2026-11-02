@@ -18,6 +18,10 @@ struct CustomReminder: Codable, Identifiable, Equatable {
     var startMinute = 10 * 60
     var endMinute = 18 * 60
     var weekdays: Set<Int> = [2, 3, 4, 5, 6]
+    /// A guided routine to run when the reminder pops up (e.g. physiotherapy).
+    var program: ReminderProgram? = nil
+
+    var hasProgram: Bool { !(program?.steps.isEmpty ?? true) }
 
     /// Minutes of the day this reminder fires on an active weekday.
     var minutes: [Int] {
@@ -101,6 +105,80 @@ extension CustomReminder {
         startMinute = c.value(.startMinute, startMinute)
         endMinute = c.value(.endMinute, endMinute)
         weekdays = c.value(.weekdays, weekdays)
+        program = c.value(.program, nil)
+    }
+}
+
+/// One exercise in a reminder's program.
+struct ProgramStep: Codable, Equatable, Identifiable {
+    var id = UUID()
+    var exerciseID: String
+    var seconds: Int
+}
+
+extension ProgramStep {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.value(.id, UUID())
+        exerciseID = c.value(.exerciseID, "reach")
+        seconds = c.value(.seconds, 30)
+    }
+}
+
+/// Steps repeated for a number of sets, with a rest between sets.
+struct ReminderProgram: Codable, Equatable {
+    var steps: [ProgramStep] = []
+    var sets = 1
+    var restSeconds = 30
+
+    static let maxSteps = 8
+
+    var totalSeconds: Int {
+        let once = steps.reduce(0) { $0 + $1.seconds }
+        return once * max(1, sets) + restSeconds * max(0, sets - 1)
+    }
+}
+
+extension ReminderProgram {
+    init(from decoder: Decoder) throws {
+        self.init()
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        steps = c.value(.steps, steps)
+        sets = c.value(.sets, sets)
+        restSeconds = c.value(.restSeconds, restSeconds)
+    }
+}
+
+/// Ready-made programs built from the exercise library.
+enum ProgramPreset: String, CaseIterable, Identifiable {
+    case neckShoulders, lowerBack, wristsEyes, legs
+
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .neckShoulders: return tr("Neck & shoulders", "Шия й плечі", "Шея и плечи")
+        case .lowerBack: return tr("Lower back", "Поперек", "Поясница")
+        case .wristsEyes: return tr("Wrists & eyes", "Зап'ястки й очі", "Запястья и глаза")
+        case .legs: return tr("Legs", "Ноги", "Ноги")
+        }
+    }
+
+    var program: ReminderProgram {
+        func steps(_ list: [(String, Int)]) -> [ProgramStep] { list.map { ProgramStep(exerciseID: $0.0, seconds: $0.1) } }
+        switch self {
+        case .neckShoulders:
+            return ReminderProgram(steps: steps([("neck", 30), ("chintuck", 30), ("shoulders", 30), ("blades", 30), ("chest", 30)]),
+                                   sets: 2, restSeconds: 20)
+        case .lowerBack:
+            return ReminderProgram(steps: steps([("backbend", 30), ("hips", 30), ("twist", 30), ("hamstrings", 30), ("sidebend", 30)]),
+                                   sets: 2, restSeconds: 20)
+        case .wristsEyes:
+            return ReminderProgram(steps: steps([("wrists", 30), ("shake", 20), ("eyes", 20), ("breathe", 30)]), sets: 1, restSeconds: 0)
+        case .legs:
+            return ReminderProgram(steps: steps([("march", 30), ("calves", 30), ("squats", 40), ("ankles", 30), ("deskpushups", 40)]),
+                                   sets: 2, restSeconds: 30)
+        }
     }
 }
 

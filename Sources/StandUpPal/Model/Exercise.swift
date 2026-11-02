@@ -101,6 +101,31 @@ enum ExerciseLibrary {
                                       "Струси кисті, руки й ноги, як песик, що щойно виліз з озера.",
                                       "Стряхни кисти, руки и ноги, как пёсик, только что вылезший из озера."),
                      seconds: 20),
+            Exercise(id: "chintuck", name: tr("Chin tucks", "Втягування підборіддя", "Втягивание подбородка"), emoji: "🐢",
+                     instructions: tr("Sit or stand tall. Glide your chin straight back into a gentle double chin, hold for 3 seconds, release.",
+                                      "Сядь або стань рівно. Плавно відведи підборіддя назад, ніби робиш подвійне підборіддя, затримайся на 3 секунди й розслабся.",
+                                      "Сядь или встань ровно. Плавно отведи подбородок назад, будто делаешь двойной подбородок, задержись на 3 секунды и расслабься."),
+                     seconds: 30),
+            Exercise(id: "blades", name: tr("Shoulder-blade squeeze", "Зведення лопаток", "Сведение лопаток"), emoji: "🪽",
+                     instructions: tr("Pull your shoulder blades back and down as if holding a pencil between them. Hold 5 seconds, release.",
+                                      "Зведи лопатки назад і вниз, ніби тримаєш між ними олівець. Затримайся на 5 секунд і відпусти.",
+                                      "Сведи лопатки назад и вниз, будто держишь между ними карандаш. Задержись на 5 секунд и отпусти."),
+                     seconds: 30),
+            Exercise(id: "backbend", name: tr("Standing back bend", "Прогин стоячи", "Прогиб стоя"), emoji: "🌙",
+                     instructions: tr("Hands on your lower back, gently lean back and look up a little. Breathe, then come back slowly.",
+                                      "Долоні на поперек, м'яко прогнися назад і трохи подивися вгору. Подихай і повільно повертайся.",
+                                      "Ладони на поясницу, мягко прогнись назад и немного посмотри вверх. Подыши и медленно возвращайся."),
+                     seconds: 30),
+            Exercise(id: "ankles", name: tr("Ankle circles", "Кола стопами", "Круги стопами"), emoji: "🦶",
+                     instructions: tr("Lift one foot and draw slow circles with your ankle, both directions. Switch feet halfway.",
+                                      "Підніми одну ногу й малюй стопою повільні кола в обидва боки. На половині зміни ногу.",
+                                      "Подними одну ногу и рисуй стопой медленные круги в обе стороны. На половине смени ногу."),
+                     seconds: 30),
+            Exercise(id: "deskpushups", name: tr("Desk push-ups", "Віджимання від столу", "Отжимания от стола"), emoji: "🏋️",
+                     instructions: tr("Hands on the edge of a sturdy desk, step back and lower your chest towards it, then push away. Slow and controlled.",
+                                      "Руки на край стійкого столу, відступи назад і опускай груди до столу, потім відштовхнись. Повільно й під контролем.",
+                                      "Руки на край устойчивого стола, отступи назад и опускай грудь к столу, затем оттолкнись. Медленно и под контролем."),
+                     seconds: 40),
             Exercise(id: "eyes", name: tr("Eye break", "Перерва для очей", "Перерыв для глаз"), emoji: "👀",
                      instructions: tr("Look at something at least six metres away. Let your eyes relax and blink slowly.",
                                       "Подивися на щось щонайменше за шість метрів. Дай очам розслабитися й повільно покліпай.",
@@ -119,6 +144,37 @@ enum ExerciseLibrary {
     }
 
     static let maxCustom = 6
+
+    /// The exercises a program runs, sets expanded and rests in between. Steps whose
+    /// exercise no longer exists are left out.
+    static func routine(for program: ReminderProgram, settings: AppSettings) -> [Exercise] {
+        let library = all(settings)
+        let once: [Exercise] = program.steps.compactMap { step in
+            guard var exercise = library.first(where: { $0.id == step.exerciseID }) else { return nil }
+            exercise.seconds = max(5, step.seconds)
+            return exercise
+        }
+        guard !once.isEmpty else { return [] }
+        var result: [Exercise] = []
+        for set in 0..<max(1, program.sets) {
+            if set > 0, program.restSeconds > 0 { result.append(rest(seconds: program.restSeconds)) }
+            result += once
+        }
+        return result
+    }
+
+    /// A pause between sets of a program.
+    static func rest(seconds: Int) -> Exercise {
+        Exercise(id: "rest", name: tr("Rest", "Відпочинок", "Отдых"), emoji: "😮‍💨",
+                 instructions: tr("Breathe and shake out. Next set coming up.", "Подихай і розслабся. Скоро наступний підхід.",
+                                  "Подыши и расслабься. Скоро следующий подход."),
+                 seconds: seconds)
+    }
+
+    /// Any exercise by id: built-in or the user's own.
+    static func exercise(_ id: String, settings: AppSettings) -> Exercise? {
+        all(settings).first { $0.id == id }
+    }
 
     /// A fresh random routine that fits the requested length: an opener, a shuffled
     /// middle (custom exercises first), and a calm closer.

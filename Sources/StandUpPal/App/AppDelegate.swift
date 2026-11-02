@@ -165,7 +165,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if occurrence.isPreview {
             previewOccurrence = nil
             reminderPanel.close()
-            if case .warmUp = action { openWarmUp(nil) }
+            if case .warmUp = action { openWarmUp(occurrence) }
             return
         }
         switch action {
@@ -194,7 +194,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             guard let self, self.settingsWindow?.isVisible != true else { return }
             NSApp.deactivate()
         }
-        warmUp.open(occurrence: occurrence)
+        var routine: [Exercise]?
+        var title: String?
+        if let id = occurrence?.customID, let reminder = store.reminders.first(where: { $0.id == id }),
+           let program = reminder.program, reminder.hasProgram {
+            routine = ExerciseLibrary.routine(for: program, settings: store.settings)
+            title = "\(reminder.emoji) \(reminder.title)"
+        }
+        warmUp.open(occurrence: occurrence, routine: routine, title: title)
     }
 
     // MARK: Status item
@@ -575,6 +582,10 @@ extension AppDelegate {
         store.runtime.hasOnboarded = true
         store.showWelcome = false
         store.toast = nil
+        if !store.reminders.isEmpty, !store.reminders[0].hasProgram {
+            store.reminders[0].program = ProgramPreset.neckShoulders.program
+        }
+        ReminderEditor.startOnProgram = true
         // Nothing real may be on screen while the previews are captured.
         let soon = Date().addingTimeInterval(60)
         store.runtime.firedIDs.formUnion(scheduler.occurrences(on: Date()).filter { $0.due <= soon }.map(\.id))

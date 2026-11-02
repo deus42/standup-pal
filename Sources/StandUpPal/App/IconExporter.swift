@@ -84,6 +84,12 @@ struct PetGallery: View {
         return rows
     }
 
+    /// Every exercise motion at a telling moment, for checking the demonstrations.
+    private var motionRows: [[(ExerciseMotion, Double)]] {
+        let all = ExerciseMotion.allCases.map { ($0, 0.55) }
+        return stride(from: 0, to: all.count, by: 7).map { Array(all[$0..<min($0 + 7, all.count)]) }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
@@ -91,6 +97,17 @@ struct PetGallery: View {
                     ForEach(row) { tile in
                         PetCanvas(look: tile.look, mood: tile.mood, t: tile.t)
                             .frame(width: 110, height: 110)
+                    }
+                }
+            }
+            ForEach(Array(motionRows.enumerated()), id: \.offset) { _, row in
+                HStack(spacing: 6) {
+                    ForEach(row, id: \.0) { motion, t in
+                        VStack(spacing: 0) {
+                            PetCanvas(look: look(.blob, "mint", head: .sweatband), mood: .exercise, t: t, effects: false, motion: motion)
+                                .frame(width: 110, height: 100)
+                            Text(motion.rawValue).font(.system(size: 10)).foregroundColor(.gray)
+                        }
                     }
                 }
             }

@@ -124,9 +124,15 @@ struct RemindersSettings: View {
 }
 
 struct ReminderEditor: View {
+    @EnvironmentObject var store: AppStore
     @Binding var reminder: CustomReminder
     var tint: Color
     var onPreview: () -> Void
+
+    enum Pane { case schedule, program }
+    /// Snapshot runs open the program pane so it can be checked.
+    nonisolated(unsafe) static var startOnProgram = false
+    @ViewState private var pane: Pane = ReminderEditor.startOnProgram ? .program : .schedule
 
     private let emojiChoices = ["💪", "🦵", "💧", "🚶", "🧘", "👀", "🤸", "🍎", "🫁", "☕️", "🪴", "📵"]
 
@@ -170,65 +176,77 @@ struct ReminderEditor: View {
                 SettingsToggle(title: tr("Enabled", "Увімкнено", "Включено"), isOn: $reminder.isEnabled, divider: false)
             }
 
-            SettingsGroup(title: tr("Schedule", "Розклад", "Расписание"),
-                          footer: tr("When it pops up you can mark it done, skip it, or push it back by 1 or 2 hours.",
-                                     "Коли воно з'явиться, можна натиснути «Готово», пропустити або відкласти на 1–2 години.",
-                                     "Когда оно появится, можно нажать «Готово», пропустить или отложить на 1–2 часа.")) {
-                Picker("", selection: $reminder.mode) {
-                    Text(tr("At set times", "У певний час", "В определённое время")).tag(CustomReminder.Mode.times)
-                    Text(tr("Every few hours", "Кожні кілька годин", "Каждые несколько часов")).tag(CustomReminder.Mode.interval)
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .padding(10)
-                Divider().padding(.leading, 12)
+            Picker("", selection: $pane) {
+                Text(tr("Schedule", "Розклад", "Расписание")).tag(Pane.schedule)
+                Text(reminder.hasProgram ? tr("Program ✓", "Програма ✓", "Программа ✓") : tr("Program", "Програма", "Программа"))
+                    .tag(Pane.program)
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
 
-                if reminder.mode == .times {
-                    ForEach(Array(reminder.times.enumerated()), id: \.offset) { index, _ in
-                        SettingsRow(title: tr("Time \(index + 1)", "Час \(index + 1)", "Время \(index + 1)")) {
-                            HStack(spacing: 8) {
-                                TimeField(minutes: timeBinding(index))
-                                Button {
-                                    if reminder.times.indices.contains(index) { reminder.times.remove(at: index) }
-                                } label: {
-                                    Image(systemName: "minus.circle.fill").foregroundStyle(.secondary)
+            if pane == .schedule {
+                SettingsGroup(title: tr("Schedule", "Розклад", "Расписание"),
+                              footer: tr("When it pops up you can mark it done, skip it, or push it back by 1 or 2 hours.",
+                                         "Коли воно з'явиться, можна натиснути «Готово», пропустити або відкласти на 1–2 години.",
+                                         "Когда оно появится, можно нажать «Готово», пропустить или отложить на 1–2 часа.")) {
+                    Picker("", selection: $reminder.mode) {
+                        Text(tr("At set times", "У певний час", "В определённое время")).tag(CustomReminder.Mode.times)
+                        Text(tr("Every few hours", "Кожні кілька годин", "Каждые несколько часов")).tag(CustomReminder.Mode.interval)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .padding(10)
+                    Divider().padding(.leading, 12)
+
+                    if reminder.mode == .times {
+                        ForEach(Array(reminder.times.enumerated()), id: \.offset) { index, _ in
+                            SettingsRow(title: tr("Time \(index + 1)", "Час \(index + 1)", "Время \(index + 1)")) {
+                                HStack(spacing: 8) {
+                                    TimeField(minutes: timeBinding(index))
+                                    Button {
+                                        if reminder.times.indices.contains(index) { reminder.times.remove(at: index) }
+                                    } label: {
+                                        Image(systemName: "minus.circle.fill").foregroundStyle(.secondary)
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .disabled(reminder.times.count <= 1)
                                 }
-                                .buttonStyle(.borderless)
-                                .disabled(reminder.times.count <= 1)
                             }
                         }
-                    }
-                    HStack {
-                        Button {
-                            let last = reminder.times.max() ?? 10 * 60
-                            reminder.times.append(min(last + 60, 23 * 60 + 30))
-                        } label: {
-                            Label(tr("Add a time", "Додати час", "Добавить время"), systemImage: "plus.circle.fill")
+                        HStack {
+                            Button {
+                                let last = reminder.times.max() ?? 10 * 60
+                                reminder.times.append(min(last + 60, 23 * 60 + 30))
+                            } label: {
+                                Label(tr("Add a time", "Додати час", "Добавить время"), systemImage: "plus.circle.fill")
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(reminder.times.count >= CustomReminder.maxTimes)
+                            Spacer()
                         }
-                        .buttonStyle(.borderless)
-                        .disabled(reminder.times.count >= CustomReminder.maxTimes)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    Divider().padding(.leading, 12)
-                } else {
-                    SettingsRow(title: tr("Repeat", "Повтор", "Повтор")) {
-                        Picker("", selection: $reminder.intervalMinutes) {
-                            ForEach([30, 45, 60, 90, 120, 180, 240], id: \.self) { Text(Clock.everyLabel($0)).tag($0) }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        Divider().padding(.leading, 12)
+                    } else {
+                        SettingsRow(title: tr("Repeat", "Повтор", "Повтор")) {
+                            Picker("", selection: $reminder.intervalMinutes) {
+                                ForEach([30, 45, 60, 90, 120, 180, 240], id: \.self) { Text(Clock.everyLabel($0)).tag($0) }
+                            }
+                            .labelsHidden()
+                            .fixedSize()
                         }
-                        .labelsHidden()
-                        .fixedSize()
+                        SettingsRow(title: tr("From", "З", "С")) { TimeField(minutes: $reminder.startMinute) }
+                        SettingsRow(title: tr("Until", "До", "До")) { TimeField(minutes: $reminder.endMinute) }
                     }
-                    SettingsRow(title: tr("From", "З", "С")) { TimeField(minutes: $reminder.startMinute) }
-                    SettingsRow(title: tr("Until", "До", "До")) { TimeField(minutes: $reminder.endMinute) }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(tr("Days", "Дні", "Дни")).font(.system(size: 13))
+                        WeekdayPicker(selection: $reminder.weekdays, tint: tint, dayWidth: 40)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(tr("Days", "Дні", "Дни")).font(.system(size: 13))
-                    WeekdayPicker(selection: $reminder.weekdays, tint: tint, dayWidth: 40)
-                }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                programGroup
             }
 
             HStack(spacing: 10) {
@@ -243,6 +261,150 @@ struct ReminderEditor: View {
                 Spacer(minLength: 0)
             }
         }
+    }
+
+    // MARK: Program
+
+    private var programGroup: some View {
+        let program = reminder.program ?? ReminderProgram()
+        let total = Clock.minutesLabel(Double(program.totalSeconds))
+        return SettingsGroup(title: tr("Program", "Програма", "Программа"),
+                             footer: program.steps.isEmpty
+                                 ? tr("Add exercises or pick a ready-made program. When the reminder pops up, Start the program runs it with a timer.",
+                                      "Додай вправи або обери готову програму. Коли нагадування з'явиться, «Почати програму» запустить її з таймером.",
+                                      "Добавь упражнения или выбери готовую программу. Когда напоминание появится, «Начать программу» запустит её с таймером.")
+                                 : tr("Takes about \(total). The pet shows every move.", "Триває близько \(total). Улюбленець показує кожен рух.",
+                                      "Длится около \(total). Питомец показывает каждое движение.")) {
+            HStack(spacing: 8) {
+                Menu {
+                    ForEach(ProgramPreset.allCases) { preset in
+                        Button(preset.name) { reminder.program = preset.program }
+                    }
+                } label: {
+                    Label(tr("Ready-made programs", "Готові програми", "Готовые программы"), systemImage: "sparkles")
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                Spacer()
+                if !program.steps.isEmpty {
+                    Button(tr("Clear", "Очистити", "Очистить")) { reminder.program = nil }
+                        .buttonStyle(.borderless)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            Divider().padding(.leading, 12)
+            ForEach(Array(program.steps.enumerated()), id: \.element.id) { index, _ in
+                stepRow(index)
+            }
+            HStack {
+                Button { addStep() } label: {
+                    Label(tr("Add an exercise", "Додати вправу", "Добавить упражнение"), systemImage: "plus.circle.fill")
+                }
+                .buttonStyle(.borderless)
+                .disabled(program.steps.count >= ReminderProgram.maxSteps)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            if !program.steps.isEmpty {
+                Divider().padding(.leading, 12)
+                SettingsRow(title: tr("Sets", "Підходи", "Подходы")) {
+                    ValueStepper(value: programBinding(\.sets), range: 1...5) { "\($0)" }
+                }
+                SettingsRow(title: tr("Rest between sets", "Відпочинок між підходами", "Отдых между подходами"), divider: false) {
+                    Picker("", selection: programBinding(\.restSeconds)) {
+                        ForEach(Self.restChoices(including: reminder.program?.restSeconds), id: \.self) {
+                            Text($0 == 0 ? tr("None", "Без", "Без") : Words.seconds($0)).tag($0)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled((reminder.program?.sets ?? 1) <= 1)
+                }
+            }
+        }
+    }
+
+    /// The usual rest lengths, plus whatever a program already uses.
+    static func restChoices(including current: Int?) -> [Int] {
+        Array(Set([0, 10, 15, 20, 30, 45, 60] + [current ?? 0])).sorted()
+    }
+
+    private func stepRow(_ index: Int) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Text("\(index + 1)")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 14)
+                Picker("", selection: stepExercise(index)) {
+                    ForEach(ExerciseLibrary.all(store.settings)) { exercise in
+                        Text("\(exercise.emoji) \(exercise.name)").tag(exercise.id)
+                    }
+                }
+                .labelsHidden()
+                .frame(maxWidth: .infinity)
+                ValueStepper(value: stepSeconds(index), range: 10...180, step: 5) { Words.seconds($0) }
+                Button { removeStep(index) } label: {
+                    Image(systemName: "minus.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            Divider().padding(.leading, 12)
+        }
+    }
+
+    private func programBinding(_ key: WritableKeyPath<ReminderProgram, Int>) -> Binding<Int> {
+        Binding(
+            get: { (reminder.program ?? ReminderProgram())[keyPath: key] },
+            set: { value in
+                var program = reminder.program ?? ReminderProgram()
+                program[keyPath: key] = value
+                reminder.program = program
+            }
+        )
+    }
+
+    private func stepExercise(_ index: Int) -> Binding<String> {
+        Binding(
+            get: { reminder.program?.steps[safe: index]?.exerciseID ?? "" },
+            set: { id in
+                guard var program = reminder.program, program.steps.indices.contains(index) else { return }
+                program.steps[index].exerciseID = id
+                if let exercise = ExerciseLibrary.exercise(id, settings: store.settings) { program.steps[index].seconds = exercise.seconds }
+                reminder.program = program
+            }
+        )
+    }
+
+    private func stepSeconds(_ index: Int) -> Binding<Int> {
+        Binding(
+            get: { reminder.program?.steps[safe: index]?.seconds ?? 30 },
+            set: { value in
+                guard var program = reminder.program, program.steps.indices.contains(index) else { return }
+                program.steps[index].seconds = value
+                reminder.program = program
+            }
+        )
+    }
+
+    private func addStep() {
+        var program = reminder.program ?? ReminderProgram()
+        guard program.steps.count < ReminderProgram.maxSteps else { return }
+        let used = Set(program.steps.map(\.exerciseID))
+        let library = ExerciseLibrary.all(store.settings)
+        guard let next = library.first(where: { !used.contains($0.id) }) ?? library.first else { return }
+        program.steps.append(ProgramStep(exerciseID: next.id, seconds: next.seconds))
+        reminder.program = program
+    }
+
+    private func removeStep(_ index: Int) {
+        guard var program = reminder.program, program.steps.indices.contains(index) else { return }
+        program.steps.remove(at: index)
+        reminder.program = program.steps.isEmpty ? nil : program
     }
 
     private func timeBinding(_ index: Int) -> Binding<Int> {

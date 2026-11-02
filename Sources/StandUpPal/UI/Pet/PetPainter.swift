@@ -50,6 +50,8 @@ struct PetPainter {
     let t: Double
     var effects = true
     var zoom: Double = 1
+    /// During `.exercise`, which move the pet demonstrates.
+    var motion: ExerciseMotion? = nil
 
     /// A time at which a still picture shows what makes the species special
     /// (Booty faces away).
@@ -64,6 +66,12 @@ struct PetPainter {
         var tilt = 0.0
         var armL = 22.0
         var armR = 22.0
+        var dx = 0.0
+        var footL = 0.0
+        var footR = 0.0
+        var gazeX = 0.0
+        var gazeY = 0.0
+        var eyesClosed = false
     }
 
     private let ink = Color(.sRGB, red: 0.17, green: 0.14, blue: 0.25)
@@ -117,7 +125,7 @@ struct PetPainter {
                  with: .color(.black.opacity(0.14 * (1 - liftFactor * 0.6))))
 
         var body = ctx
-        body.translateBy(x: 50, y: 91 - p.lift)
+        body.translateBy(x: 50 + p.dx, y: 91 - p.lift)
         body.rotate(by: .degrees(p.tilt))
         body.scaleBy(x: p.sx, y: p.sy)
         body.translateBy(x: -50, y: -91)
@@ -126,12 +134,12 @@ struct PetPainter {
         drawTopFeatures(&body)
         arm(&body, left: true, angle: p.armL)
         arm(&body, left: false, angle: p.armR)
-        drawFeet(&body)
+        drawFeet(&body, pose: p)
         if facing.back {
             drawBodyBack(&body)
         } else {
             drawBody(&body)
-            drawFace(&body)
+            drawFace(&body, pose: p)
             drawNeckGear(&body)
         }
         drawHeadGear(&body, back: facing.back)
@@ -147,7 +155,10 @@ struct PetPainter {
         switch mood {
         case .idle: (cycle, start, end) = (12, 8, 11)
         case .happy, .celebrate: (cycle, start, end) = (3.2, 1.6, 3.2)
-        case .exercise: (cycle, start, end) = (8, 4, 8)
+        case .exercise:
+            // Only moves that read the same from behind.
+            guard motion == nil || motion == .squat || motion == .generic else { return (false, 1) }
+            (cycle, start, end) = (8, 4, 8)
         default: return (false, 1)
         }
         let phase = (t.truncatingRemainder(dividingBy: cycle) + cycle).truncatingRemainder(dividingBy: cycle)
@@ -209,11 +220,7 @@ struct PetPainter {
             p.armL = 6
             p.armR = 6
         case .exercise:
-            let c = (sin(t * 3.4) + 1) / 2
-            p.sy = 1 - c * 0.15
-            p.sx = 1 + c * 0.08
-            p.armL = 90 + (1 - c) * 70
-            p.armR = 90 + (1 - c) * 70
+            exercisePose(&p)
         }
         // Holding something: keep it clear of the body.
         if look.hands != .none, p.armL < 60 {
@@ -221,6 +228,148 @@ struct PetPainter {
             p.armR += 9
         }
         return p
+    }
+
+    /// One pose per exercise, so the pet shows the move rather than a generic bounce.
+    private func exercisePose(_ p: inout Pose) {
+        switch motion ?? .generic {
+        case .reach:
+            let s = sin(t * 1.2)
+            p.sy = 1.06 + s * 0.03
+            p.sx = 0.97
+            p.lift = 1.5 + s
+            p.armL = 168 + s * 6
+            p.armR = 168 - s * 6
+            p.gazeY = -1.5
+        case .march:
+            let s = sin(t * 6)
+            p.footL = max(0, s) * 6
+            p.footR = max(0, -s) * 6
+            p.lift = abs(s) * 2
+            p.armL = 40 + s * 35
+            p.armR = 40 - s * 35
+        case .neck:
+            let s = sin(t * 1.6)
+            p.tilt = s * 13
+            p.gazeX = s * 1.5
+            p.gazeY = abs(s) * 1.2
+            p.armL = 18
+            p.armR = 18
+        case .shoulders:
+            let s = sin(t * 3)
+            p.lift = (s + 1) * 1.6
+            p.sy = 1 + s * 0.04
+            p.armL = 26 + s * 14
+            p.armR = 26 + s * 14
+        case .armCircles:
+            let angle = (t * 230).truncatingRemainder(dividingBy: 360)
+            p.armL = angle
+            p.armR = angle
+        case .chest:
+            let s = (sin(t * 1.5) + 1) / 2
+            p.sx = 1 + s * 0.05
+            p.sy = 1 + s * 0.03
+            p.armL = 40 + s * 22
+            p.armR = 40 + s * 22
+            p.gazeY = -s
+        case .twist:
+            let s = sin(t * 2)
+            p.sx = 1 - abs(s) * 0.12
+            p.dx = s * 2
+            p.gazeX = s * 2.6
+            p.armL = 75 - s * 15
+            p.armR = 75 + s * 15
+        case .sideBend:
+            let s = sin(t * 1.4)
+            p.tilt = s * 16
+            p.armL = 55 + max(0, s) * 115
+            p.armR = 55 + max(0, -s) * 115
+        case .hips:
+            let s = sin(t * 2.5)
+            p.dx = s * 4
+            p.lift = (cos(t * 2.5) + 1) * 1.2
+            p.tilt = s * 4
+            p.armL = 38
+            p.armR = 38
+        case .calves:
+            let s = (sin(t * 2.6) + 1) / 2
+            p.lift = s * 6
+            p.sy = 1 + s * 0.03
+            p.armL = 24
+            p.armR = 24
+        case .squat, .generic:
+            let c = (sin(t * 3.4) + 1) / 2
+            p.sy = 1 - c * 0.15
+            p.sx = 1 + c * 0.08
+            p.armL = 90 + (1 - c) * 70
+            p.armR = 90 + (1 - c) * 70
+        case .hinge:
+            let s = (sin(t * 1.3) + 1) / 2
+            p.sy = 0.86 + s * 0.05
+            p.sx = 1.05
+            p.armL = 6
+            p.armR = 6
+            p.gazeY = 2
+        case .wrists:
+            p.armL = 92 + sin(t * 14) * 6
+            p.armR = 92 - sin(t * 14) * 6
+        case .shake:
+            p.tilt = sin(t * 20) * 4
+            p.dx = sin(t * 17) * 1.5
+            p.armL = 32 + sin(t * 15) * 25
+            p.armR = 32 + sin(t * 13 + 1) * 25
+            p.footL = max(0, sin(t * 11)) * 2
+            p.footR = max(0, -sin(t * 11)) * 2
+        case .eyes:
+            p.gazeX = sin(t * 0.9) * 3
+            p.gazeY = -0.5
+            p.armL = 18
+            p.armR = 18
+        case .breathe:
+            let s = sin(t * 0.63)
+            p.sx = 1 + s * 0.05
+            p.sy = 1 + s * 0.06
+            p.armL = 22 + max(0, s) * 28
+            p.armR = 22 + max(0, s) * 28
+            p.eyesClosed = true
+        case .chinTuck:
+            let s = (sin(t * 2) + 1) / 2
+            p.sy = 1 - s * 0.035
+            p.sx = 1 + s * 0.025
+            p.gazeY = s * 0.8
+            p.armL = 20
+            p.armR = 20
+        case .bladeSqueeze:
+            let s = (sin(t * 2.2) + 1) / 2
+            p.sx = 1 + s * 0.05
+            p.armL = 45 + s * 28
+            p.armR = 45 + s * 28
+        case .backBend:
+            let s = (sin(t * 1.2) + 1) / 2
+            p.sy = 1.03 + s * 0.03
+            p.lift = 1 + s
+            p.armL = 62
+            p.armR = 62
+            p.gazeY = -1.8 * s
+        case .ankles:
+            let left = (t / 4).truncatingRemainder(dividingBy: 2) < 1
+            let s = (sin(t * 3) + 1) / 2 * 4
+            p.footL = left ? s : 0
+            p.footR = left ? 0 : s
+            p.tilt = left ? 3 : -3
+            p.armL = 30
+            p.armR = 30
+        case .wallPush:
+            let s = (sin(t * 2.4) + 1) / 2
+            p.sy = 0.95 + s * 0.05
+            p.armL = 100 - s * 20
+            p.armR = 100 - s * 20
+        case .rest:
+            let b = sin(t * 2.2)
+            p.sy = 1 + b * 0.025
+            p.armL = 14
+            p.armR = 14
+        }
     }
 
     // MARK: Behind the body
@@ -400,7 +549,7 @@ struct PetPainter {
         a.stroke(shape, with: .color(outline), lineWidth: 1.7)
     }
 
-    private func drawFeet(_ g: inout GraphicsContext) {
+    private func drawFeet(_ g: inout GraphicsContext, pose p: Pose) {
         let fill: RGB
         switch species {
         case .chick, .penguin: fill = beakRGB
@@ -408,8 +557,8 @@ struct PetPainter {
         default: fill = bodyRGB.darker(0.22)
         }
         let wide = species == .frog
-        for x in wide ? [31.0, 55.0] : [33.5, 54.5] {
-            let foot = CGRect(x: x, y: 85.5, width: wide ? 14 : 12, height: 8)
+        for (i, x) in (wide ? [31.0, 55.0] : [33.5, 54.5]).enumerated() {
+            let foot = CGRect(x: x, y: 85.5 - (i == 0 ? p.footL : p.footR), width: wide ? 14 : 12, height: 8)
             g.fill(Path(ellipseIn: foot), with: .color(fill.color))
             g.stroke(Path(ellipseIn: foot), with: .color(species == .chick || species == .penguin ? beakRGB.darker(0.35).color : outline),
                      lineWidth: 1.7)
@@ -516,7 +665,7 @@ struct PetPainter {
 
     // MARK: Face
 
-    private func drawFace(_ g: inout GraphicsContext) {
+    private func drawFace(_ g: inout GraphicsContext, pose: Pose) {
         let eyes = eyeCenters
 
         if species == .panda {
@@ -544,7 +693,7 @@ struct PetPainter {
         }
 
         drawNose(&g)
-        if look.head != .shades { drawEyes(&g, eyes) }
+        if look.head != .shades { drawEyes(&g, eyes, pose: pose) }
         drawMouth(&g)
     }
 
@@ -583,15 +732,17 @@ struct PetPainter {
         }
     }
 
-    private func drawEyes(_ g: inout GraphicsContext, _ eyes: [CGPoint]) {
-        let gaze = CGPoint(x: sin(t * 0.45) * 1.1 + (sin(t * 0.13) > 0.7 ? 1.2 : 0), y: cos(t * 0.31) * 0.5)
+    private func drawEyes(_ g: inout GraphicsContext, _ eyes: [CGPoint], pose: Pose) {
+        let idleGaze = CGPoint(x: sin(t * 0.45) * 1.1 + (sin(t * 0.13) > 0.7 ? 1.2 : 0), y: cos(t * 0.31) * 0.5)
+        let gaze = mood == .exercise && (pose.gazeX != 0 || pose.gazeY != 0)
+            ? CGPoint(x: pose.gazeX, y: pose.gazeY) : idleGaze
         let blinking = (t + 0.7).truncatingRemainder(dividingBy: 3.9) < 0.14
         let sclera = species == .panda || species == .frog
         // Closed-eye arcs on a dark panda patch need to be light.
         let lineInk = species == .panda && look.color.luminance < 0.55 ? Color.white : ink
         let small = species == .axolotl
 
-        switch mood {
+        switch pose.eyesClosed ? .sleepy : mood {
         case .happy, .celebrate:
             for e in eyes {
                 var arc = Path()
@@ -628,7 +779,8 @@ struct PetPainter {
                            with: .color(.white.opacity(0.75)))
                 }
             }
-            if mood == .sad || mood == .exercise {
+            let calmMove = motion == .rest || motion == .breathe || motion == .eyes
+            if mood == .sad || (mood == .exercise && !calmMove) {
                 let sad = mood == .sad
                 var brows = Path()
                 for (i, e) in eyes.enumerated() {
