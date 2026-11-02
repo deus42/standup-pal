@@ -40,9 +40,9 @@ struct RemindersSettings: View {
             } else {
                 VStack(spacing: 12) {
                     Text("🗓️").font(.system(size: 44))
-                    Text(tr("Extra reminders for push-ups, water, walks… anything.",
-                            "Додаткові нагадування: віджимання, вода, прогулянки… що завгодно.",
-                            "Дополнительные напоминания: отжимания, вода, прогулки… что угодно."))
+                    Text(tr("Extra reminders for push-ups, walks, physio… anything.",
+                            "Додаткові нагадування: віджимання, прогулянки, фізіотерапія… що завгодно.",
+                            "Дополнительные напоминания: отжимания, прогулки, физиотерапия… что угодно."))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -175,7 +175,6 @@ struct ReminderEditor: View {
                 Divider().padding(.leading, 12)
                 HStack(spacing: 18) {
                     Toggle(tr("Enabled", "Увімкнено", "Включено"), isOn: $reminder.isEnabled)
-                    Toggle(tr("Counts a glass of water", "Рахує склянку води", "Засчитывает стакан воды"), isOn: $reminder.tracksWater)
                     Spacer(minLength: 0)
                 }
                 .toggleStyle(.checkbox)

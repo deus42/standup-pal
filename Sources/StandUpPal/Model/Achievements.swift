@@ -10,7 +10,6 @@ struct AchievementContext {
     var level: Int { pet.level }
     var bestStreak: Int { max(pet.bestStreak, streak) }
     var goalDays: Int { stats.values.filter { $0.standupsDone >= max(1, dailyGoal) }.count }
-    var bestWaterDay: Int { stats.values.map(\.water).max() ?? 0 }
 }
 
 struct Achievement: Identifiable {
@@ -52,8 +51,9 @@ enum AchievementCatalog {
                         detail: tr("Daily goal 30 days running", "Денна мета 30 днів поспіль", "Дневная цель 30 дней подряд"), target: 30) { $0.bestStreak },
             Achievement(id: "goal5", emoji: "🎯", title: tr("Bullseye", "У яблучко", "В яблочко"),
                         detail: tr("Daily goal reached on 5 days", "Денна мета виконана 5 днів", "Дневная цель выполнена 5 дней"), target: 5) { $0.goalDays },
-            Achievement(id: "water8", emoji: "💧", title: tr("Hydrated", "Вода — є", "Вода — есть"),
-                        detail: tr("8 glasses of water in a day", "8 склянок води за день", "8 стаканов воды за день"), target: 8) { $0.bestWaterDay },
+            Achievement(id: "bed7", emoji: "🛌", title: tr("Sleepyhead", "Соня", "Соня"),
+                        detail: tr("Off to bed when the pet asked, 7 times", "7 разів «Іду спати» на прохання улюбленця",
+                                   "7 раз «Иду спать» по просьбе питомца"), target: 7) { $0.pet.totalBedtimes },
             Achievement(id: "eyes100", emoji: "👀", title: tr("Eagle eyes", "Орлиний зір", "Орлиное зрение"),
                         detail: tr("100 eye breaks", "100 перерв для очей", "100 перерывов для глаз"), target: 100) { $0.pet.totalEyeBreaks },
             Achievement(id: "extras25", emoji: "💪", title: tr("Extra mile", "Ще трохи", "Ещё немного"),

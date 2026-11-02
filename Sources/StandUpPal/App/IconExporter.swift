@@ -126,6 +126,35 @@ struct PetGallery: View {
                     }
                 }
             }
+            HStack(spacing: 6) {
+                ForEach([ExerciseMotion.typing, .closeLid, .yawn, .dangle], id: \.self) { motion in
+                    PetCanvas(look: look(.blob, "mint").dressed(for: .home), mood: .idle, t: motion == .closeLid ? 0.5 : 0.4, motion: motion)
+                        .frame(width: 110, height: 110)
+                }
+                PetCanvas(look: look(.kitty, "sky", head: .sweatband), mood: .dizzy, t: 0.7)
+                    .frame(width: 110, height: 110)
+                Canvas { context, size in
+                    BedPainter(look: look(.blob, "mint").dressed(for: .night), t: 1.2)
+                        .draw(&context, in: CGRect(x: 4, y: 0, width: size.width - 8, height: size.height - 7))
+                }
+                .frame(width: 110, height: 110)
+                Canvas { context, size in
+                    BedPainter(look: look(.bunny, "cherry").dressed(for: .night), t: 2.2)
+                        .draw(&context, in: CGRect(x: 4, y: 0, width: size.width - 8, height: size.height - 7))
+                }
+                .frame(width: 110, height: 110)
+            }
+            ForEach([[0.8, 2.15], [2.9, 4.4], [5.75, 7.4]], id: \.self) { pair in
+                HStack(spacing: 6) {
+                    ForEach(pair, id: \.self) { second in
+                        Canvas { context, size in
+                            BedtimeScenePainter(look: look(.blob, "mint", head: .sweatband), dressed: true, elapsed: second, clock: second)
+                                .draw(&context, size: size)
+                        }
+                        .frame(width: 340, height: 140)
+                    }
+                }
+            }
             HStack(spacing: 10) {
                 ForEach(DayPhase.allCases, id: \.self) { phase in
                     PetCanvas(look: look(.blob, "mint", head: .sweatband).dressed(for: phase), mood: phase == .night ? .sleepy : .idle,

@@ -40,15 +40,18 @@ struct HabitTests {
     }
 
     @Test func newCountersSyncAdditivelyAndDecodeFromOldData() throws {
-        let a = DayStats(water: 3, eyeBreaks: 2)
-        let b = DayStats(water: 4, eyeBreaks: 1)
-        #expect(ProgressMath.plus(a, b) == DayStats(water: 7, eyeBreaks: 3))
-        let pet = ProgressMath.plus(PetState(totalWater: 5, totalEyeBreaks: 2), PetState(totalWater: 1, totalEyeBreaks: 3))
-        #expect(pet.totalWater == 6 && pet.totalEyeBreaks == 5)
-        let old = try JSONDecoder().decode(DayStats.self, from: Data(#"{"standupsDone":4}"#.utf8))
-        #expect(old.water == 0 && old.eyeBreaks == 0 && old.standupsDone == 4)
+        let a = DayStats(extrasDone: 1, eyeBreaks: 2)
+        let b = DayStats(extrasDone: 2, eyeBreaks: 1)
+        #expect(ProgressMath.plus(a, b) == DayStats(extrasDone: 3, eyeBreaks: 3))
+        let pet = ProgressMath.plus(PetState(totalEyeBreaks: 2, totalBedtimes: 1), PetState(totalEyeBreaks: 3, totalBedtimes: 2))
+        #expect(pet.totalEyeBreaks == 5 && pet.totalBedtimes == 3)
+        // Files from 1.5–1.6 still carry water counters; they're simply ignored now.
+        let old = try JSONDecoder().decode(DayStats.self, from: Data(#"{"standupsDone":4,"water":6}"#.utf8))
+        #expect(old.eyeBreaks == 0 && old.standupsDone == 4)
+        let oldPet = try JSONDecoder().decode(PetState.self, from: Data(#"{"xp":40,"totalWater":9}"#.utf8))
+        #expect(oldPet.xp == 40 && oldPet.totalBedtimes == 0)
         let settings = try JSONDecoder().decode(AppSettings.self, from: Data("{}".utf8))
-        #expect(settings.waterGoal == 8 && settings.eyeBreaksEnabled && settings.eyeBreakMinutes == 30 && !settings.petWalks)
+        #expect(settings.eyeBreaksEnabled && settings.eyeBreakMinutes == 30 && !settings.petWalks)
     }
 
     @Test func achievementsUnlockAtTheirThresholds() {
@@ -56,36 +59,24 @@ struct HabitTests {
         #expect(AchievementCatalog.unlocked(in: context).isEmpty)
         context.pet.totalStandups = 10
         context.pet.totalWarmUps = 1
-        context.stats = ["2026-11-02": DayStats(standupsDone: 6, water: 8)]
+        context.pet.totalBedtimes = 7
+        context.stats = ["2026-11-02": DayStats(standupsDone: 6)]
         context.streak = 3
         let unlocked = AchievementCatalog.unlocked(in: context)
-        #expect(unlocked.isSuperset(of: ["standup1", "standup10", "warmup1", "streak3", "water8"]))
+        #expect(unlocked.isSuperset(of: ["standup1", "standup10", "warmup1", "streak3", "bed7"]))
+        #expect(AchievementCatalog.all.count == 18)
         #expect(!unlocked.contains("standup50") && !unlocked.contains("goal5"))
         #expect(Set(AchievementCatalog.all.map(\.id)).count == AchievementCatalog.all.count)
-    }
-
-    @MainActor
-    @Test func aWaterReminderCountsAGlass() {
-        let store = AppStore.shared
-        store.settings.soundEnabled = false
-        var reminder = CustomReminder(title: "Water", emoji: "💧")
-        reminder.tracksWater = true
-        store.reminders = [reminder]
-        let water = store.today.water
-        let occ = Occurrence(id: "extra-water-\(UUID().uuidString)", kind: .custom(reminder.id), scheduled: Date(), due: Date())
-        Scheduler.shared.resolve(occ, .done)
-        #expect(store.today.water == water + 1)
-        store.reminders = CustomReminder.defaults
     }
 
     @Test func weeklySummaryAddsUpTheWeek() {
         let start = Clock.calendar.startOfDay(for: Date(timeIntervalSince1970: 1_793_000_000))
         var stats: [String: DayStats] = [:]
-        stats[Clock.dayKey(start)] = DayStats(standupsDone: 6, warmUps: 3, activeSeconds: 600, water: 5)
+        stats[Clock.dayKey(start)] = DayStats(standupsDone: 6, warmUps: 3, extrasDone: 5, activeSeconds: 600)
         stats[Clock.dayKey(Clock.addDays(2, to: start))] = DayStats(standupsDone: 2, eyeBreaks: 4)
         stats[Clock.dayKey(Clock.addDays(8, to: start))] = DayStats(standupsDone: 9)
         let summary = WeeklySummary.make(weekStart: start, stats: stats, dailyGoal: 6)
-        #expect(summary.standups == 8 && summary.warmUps == 3 && summary.minutes == 10 && summary.water == 5)
+        #expect(summary.standups == 8 && summary.warmUps == 3 && summary.minutes == 10 && summary.extras == 5)
         #expect(summary.eyeBreaks == 4 && summary.goalDays == 1 && summary.days.count == 7)
         #expect(summary.bestDay?.standups == 6)
     }

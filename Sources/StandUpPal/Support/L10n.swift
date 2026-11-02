@@ -111,9 +111,6 @@ enum Words {
         "\(n) " + Plural.noun(n, ["day", "days"], ["день", "дні", "днів"], ["день", "дня", "дней"], in: lang)
     }
 
-    static func glasses(_ n: Int, in lang: Lang = L10n.lang) -> String {
-        "\(n) " + Plural.noun(n, ["glass", "glasses"], ["склянка", "склянки", "склянок"], ["стакан", "стакана", "стаканов"], in: lang)
-    }
 
     static func hours(_ n: Int, in lang: Lang = L10n.lang) -> String {
         "\(n) " + Plural.noun(n, ["hour", "hours"], ["година", "години", "годин"], ["час", "часа", "часов"], in: lang)

@@ -9,10 +9,11 @@ struct PetCanvas: View {
     var effects = true
     var zoom = 1.0
     var motion: ExerciseMotion? = nil
+    var gaze: CGPoint? = nil
 
     var body: some View {
         Canvas { context, size in
-            PetPainter(look: look, mood: mood, t: t, effects: effects, zoom: zoom, motion: motion).draw(&context, size: size)
+            PetPainter(look: look, mood: mood, t: t, effects: effects, zoom: zoom, motion: motion, gaze: gaze).draw(&context, size: size)
         }
     }
 }

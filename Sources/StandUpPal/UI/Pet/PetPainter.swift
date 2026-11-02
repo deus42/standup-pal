@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum PetMood: String, CaseIterable, Identifiable {
-    case idle, happy, alert, sleepy, sad, exercise, celebrate
+    case idle, happy, alert, sleepy, sad, exercise, celebrate, dizzy
     var id: String { rawValue }
 
     var label: String {
@@ -13,6 +13,7 @@ enum PetMood: String, CaseIterable, Identifiable {
         case .sad: return tr("Sad", "Сумує", "Грустит")
         case .exercise: return tr("Working out", "Тренується", "Тренируется")
         case .celebrate: return tr("Celebrating", "Святкує", "Празднует")
+        case .dizzy: return tr("Dizzy", "Голова йде обертом", "Голова кружится")
         }
     }
 }
@@ -68,8 +69,11 @@ struct PetPainter {
     let t: Double
     var effects = true
     var zoom: Double = 1
-    /// During `.exercise`, which move the pet demonstrates.
+    /// During `.exercise`, which move the pet demonstrates. Outside exercise, the
+    /// everyday moves (walk, typing, yawn…).
     var motion: ExerciseMotion? = nil
+    /// Where the eyes look, in design units (about ±2), e.g. at the cursor.
+    var gaze: CGPoint? = nil
 
     /// A time at which a still picture shows what makes the species special
     /// (Booty faces away).
@@ -192,16 +196,7 @@ struct PetPainter {
 
     private func pose(back: Bool) -> Pose {
         var p = Pose()
-        if motion == .walk, mood == .idle || mood == .sad {
-            let s = sin(t * 7)
-            p.footL = max(0, s) * 4
-            p.footR = max(0, -s) * 4
-            p.lift = abs(s) * 1.5
-            p.tilt = sin(t * 3.5) * 2
-            p.armL = 26 + s * 14
-            p.armR = 26 - s * 14
-            return p
-        }
+        if let motion, mood != .exercise, everydayPose(motion, &p) { return p }
         switch mood {
         case .idle:
             let b = sin(t * 2.0)
@@ -252,6 +247,12 @@ struct PetPainter {
             p.armR = 6
         case .exercise:
             exercisePose(&p)
+        case .dizzy:
+            p.tilt = sin(t * 6) * 9
+            p.sx = 1 + sin(t * 12) * 0.02
+            p.sy = 1 - sin(t * 12) * 0.02
+            p.armL = 34 + sin(t * 6) * 14
+            p.armR = 34 - sin(t * 6) * 14
         }
         // Holding something: keep it clear of the body.
         if look.hands != .none || look.outfit == .morning, p.armL < 60 {
@@ -259,6 +260,55 @@ struct PetPainter {
             p.armR += 9
         }
         return p
+    }
+
+    /// Moves that aren't exercises. Returns false for exercise motions.
+    private func everydayPose(_ motion: ExerciseMotion, _ p: inout Pose) -> Bool {
+        switch motion {
+        case .walk:
+            guard mood == .idle || mood == .sad else { return false }
+            let s = sin(t * 7)
+            p.footL = max(0, s) * 4
+            p.footR = max(0, -s) * 4
+            p.lift = abs(s) * 1.5
+            p.tilt = sin(t * 3.5) * 2
+            p.armL = 26 + s * 14
+            p.armR = 26 - s * 14
+        case .typing:
+            // Tapping away at a laptop on the right.
+            p.tilt = 4
+            p.armR = 84 + sin(t * 15) * 8
+            p.armL = 28 + sin(t * 2) * 3
+            p.sy = 1 + sin(t * 2) * 0.012
+            p.gazeX = 1.4
+            p.gazeY = 1
+        case .closeLid:
+            // Here `t` runs from 0 to 1 over the gesture: reach up, then push the lid down.
+            let k = max(0, min(1, t))
+            p.tilt = 4
+            p.armR = 84 + sin(k * .pi) * 52
+            p.armL = 26
+            p.gazeX = 1.4
+            p.gazeY = k
+        case .yawn:
+            p.armL = 152 + sin(t * 3) * 6
+            p.armR = 152 - sin(t * 3) * 6
+            p.sy = 1.05
+            p.sx = 0.97
+            p.lift = 1.5
+            p.eyesClosed = true
+        case .dangle:
+            // Picked up by the scruff: arms up, feet swinging.
+            p.armL = 148 + sin(t * 5) * 10
+            p.armR = 148 - sin(t * 5) * 10
+            p.sy = 1.06
+            p.sx = 0.96
+            p.footL = -2 + sin(t * 6) * 2.5
+            p.footR = -2 - sin(t * 6) * 2.5
+        default:
+            return false
+        }
+        return true
     }
 
     /// One pose per exercise, so the pet shows the move rather than a generic bounce.
@@ -272,7 +322,7 @@ struct PetPainter {
             p.armL = 168 + s * 6
             p.armR = 168 - s * 6
             p.gazeY = -1.5
-        case .march, .walk:
+        case .march, .walk, .typing, .closeLid, .yawn, .dangle:
             let s = sin(t * 6)
             p.footL = max(0, s) * 6
             p.footR = max(0, -s) * 6
@@ -778,8 +828,8 @@ struct PetPainter {
     }
 
     private func drawEyes(_ g: inout GraphicsContext, _ eyes: [CGPoint], pose: Pose) {
-        let idleGaze = CGPoint(x: sin(t * 0.45) * 1.1 + (sin(t * 0.13) > 0.7 ? 1.2 : 0), y: cos(t * 0.31) * 0.5)
-        let gaze = mood == .exercise && (pose.gazeX != 0 || pose.gazeY != 0)
+        let idleGaze = self.gaze ?? CGPoint(x: sin(t * 0.45) * 1.1 + (sin(t * 0.13) > 0.7 ? 1.2 : 0), y: cos(t * 0.31) * 0.5)
+        let gaze = (mood == .exercise || motion != nil) && (pose.gazeX != 0 || pose.gazeY != 0)
             ? CGPoint(x: pose.gazeX, y: pose.gazeY) : idleGaze
         let blinking = (t + 0.7).truncatingRemainder(dividingBy: 3.9) < 0.14
         let sclera = species == .panda || species == .frog
@@ -801,6 +851,19 @@ struct PetPainter {
                 arc.move(to: CGPoint(x: e.x - 4.4, y: e.y))
                 arc.addQuadCurve(to: CGPoint(x: e.x + 4.4, y: e.y), control: CGPoint(x: e.x, y: e.y + 4))
                 g.stroke(arc, with: .color(lineInk), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+            }
+        case .dizzy:
+            // Swirly eyes.
+            for (i, e) in eyes.enumerated() {
+                var spiral = Path()
+                let spin = t * 7 * (i == 0 ? 1 : -1)
+                for step in 0...28 {
+                    let k = Double(step) / 28
+                    let a = spin + k * 4 * .pi
+                    let point = CGPoint(x: e.x + cos(a) * k * 4.6, y: e.y + sin(a) * k * 4.6)
+                    if step == 0 { spiral.move(to: point) } else { spiral.addLine(to: point) }
+                }
+                g.stroke(spiral, with: .color(lineInk), style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
             }
         default:
             var w: Double = mood == .alert ? 9.4 : (mood == .sad ? 7.8 : 8.6)
@@ -849,6 +912,11 @@ struct PetPainter {
         let wide = species == .frog || species == .axolotl
         let half: Double = wide ? 9 : 5.5
 
+        if motion == .yawn, mood != .exercise {
+            g.fill(Path(ellipseIn: CGRect(x: 46, y: y - 3, width: 8, height: 9)), with: .color(ink))
+            g.fill(Path(ellipseIn: CGRect(x: 47.6, y: y + 2.6, width: 4.8, height: 2.8)), with: .color(Color(.sRGB, red: 1, green: 0.45, blue: 0.52)))
+            return
+        }
         switch mood {
         case .happy, .celebrate:
             var m = Path()
@@ -869,6 +937,12 @@ struct PetPainter {
             m.move(to: CGPoint(x: 50 - half * 0.82, y: y + 2.4))
             m.addQuadCurve(to: CGPoint(x: 50 + half * 0.82, y: y + 2.4), control: CGPoint(x: 50, y: y - 2))
             g.stroke(m, with: .color(ink), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+        case .dizzy:
+            var m = Path()
+            m.move(to: CGPoint(x: 50 - half * 0.8, y: y))
+            m.addCurve(to: CGPoint(x: 50 + half * 0.8, y: y), control1: CGPoint(x: 50 - half * 0.25, y: y - 3),
+                       control2: CGPoint(x: 50 + half * 0.25, y: y + 3))
+            g.stroke(m, with: .color(ink), style: StrokeStyle(lineWidth: 2, lineCap: .round))
         case .exercise:
             let puff = (sin(t * 3.4) + 1) / 2
             let w = 4 + puff * 1.6, h = 3 + puff * 2
@@ -1484,6 +1558,15 @@ struct PetPainter {
             tear.translateBy(x: eye.x - 2.5 + p.tilt * 0.3, y: eye.y + 4 + phase * 14)
             tear.fill(Path(ellipseIn: CGRect(x: -1.6, y: -2.2, width: 3.2, height: 4.4)),
                       with: .color(Color(.sRGB, red: 0.5, green: 0.78, blue: 1)))
+        case .dizzy:
+            for i in 0..<3 {
+                let a = t * 4 + Double(i) * 2 * .pi / 3
+                let depth = (sin(a) + 1) / 2
+                var star = g
+                star.opacity = 0.55 + depth * 0.45
+                star.draw(Text("✦").font(.system(size: 7 + depth * 4, weight: .bold)).foregroundColor(yellow),
+                          at: CGPoint(x: 50 + cos(a) * 24 + p.tilt * 0.4, y: 27 + sin(a) * 5 - p.lift))
+            }
         case .idle:
             break
         }

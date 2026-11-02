@@ -76,6 +76,19 @@ struct DayRhythmTests {
     }
 
     @MainActor
+    @Test func goingToBedWhenAskedCountsTowardsSleepyhead() {
+        let store = AppStore.shared
+        store.settings.soundEnabled = false
+        let before = store.pet.totalBedtimes
+        let xp = store.pet.xp
+        Scheduler.shared.wentToBed()
+        #expect(store.pet.totalBedtimes == before + 1 && store.pet.xp == xp + 3)
+        var context = store.achievementContext
+        context.pet.totalBedtimes = 7
+        #expect(AchievementCatalog.unlocked(in: context).contains("bed7"))
+    }
+
+    @MainActor
     @Test func petIsAwakeAtHomeAndAsleepAtNight() {
         let scheduler = Scheduler.shared
         AppStore.shared.reaction = nil

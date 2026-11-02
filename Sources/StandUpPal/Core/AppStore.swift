@@ -176,19 +176,6 @@ final class AppStore: ObservableObject {
 
     // MARK: Habits
 
-    /// A glass of water (or one less, to fix a mis-tap).
-    func logWater(_ delta: Int = 1) {
-        guard delta > 0 || today.water > 0 else { return }
-        updateToday { $0.water = max(0, $0.water + delta) }
-        pet.totalWater = max(0, pet.totalWater + delta)
-        if delta > 0 {
-            award(xp: 2, happiness: 2)
-            react(.happy, for: 2.5)
-            SoundPlayer.shared.play(.boop)
-        }
-        checkAchievements()
-    }
-
     var achievementContext: AchievementContext {
         AchievementContext(pet: pet, stats: stats, dailyGoal: settings.dailyGoal, streak: currentStreak())
     }

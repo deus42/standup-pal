@@ -21,7 +21,7 @@ enum SettingsTab: String, CaseIterable {
         case .general: return "gearshape.fill"
         case .reminders: return "bell.badge.fill"
         case .warmUp: return "figure.cooldown"
-        case .habits: return "drop.fill"
+        case .habits: return "moon.stars.fill"
         case .pet: return "pawprint.fill"
         case .gear: return "dumbbell.fill"
         case .stats: return "chart.bar.fill"

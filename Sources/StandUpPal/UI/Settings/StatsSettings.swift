@@ -101,9 +101,9 @@ struct StatsSettings: View {
     }
 
     private func todayLine(_ today: DayStats) -> String {
-        tr("Today: \(today.warmUps) warm-ups · \(today.extrasDone) extras · \(today.water) 💧 · \(today.eyeBreaks) 👀 · \(today.snoozed) snoozed · \(today.skipped + today.extrasSkipped) skipped",
-           "Сьогодні: розминок \(today.warmUps) · додаткових \(today.extrasDone) · \(today.water) 💧 · \(today.eyeBreaks) 👀 · відкладено \(today.snoozed) · пропущено \(today.skipped + today.extrasSkipped)",
-           "Сегодня: разминок \(today.warmUps) · дополнительных \(today.extrasDone) · \(today.water) 💧 · \(today.eyeBreaks) 👀 · отложено \(today.snoozed) · пропущено \(today.skipped + today.extrasSkipped)")
+        tr("Today: \(today.warmUps) warm-ups · \(today.extrasDone) extras · \(today.eyeBreaks) 👀 · \(today.snoozed) snoozed · \(today.skipped + today.extrasSkipped) skipped",
+           "Сьогодні: розминок \(today.warmUps) · додаткових \(today.extrasDone) · \(today.eyeBreaks) 👀 · відкладено \(today.snoozed) · пропущено \(today.skipped + today.extrasSkipped)",
+           "Сегодня: разминок \(today.warmUps) · дополнительных \(today.extrasDone) · \(today.eyeBreaks) 👀 · отложено \(today.snoozed) · пропущено \(today.skipped + today.extrasSkipped)")
     }
 
     private var streakText: String {

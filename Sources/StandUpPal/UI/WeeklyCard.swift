@@ -41,7 +41,7 @@ struct WeeklyCardView: View {
                         tile("🧍", "\(summary.standups)", tr("stand-ups", "перерв", "перерывов"))
                         tile("🤸", "\(summary.warmUps)", tr("warm-ups", "розминок", "разминок"))
                         tile("⏱️", "\(summary.minutes)", tr("minutes moving", "хвилин руху", "минут движения"))
-                        tile("💧", "\(summary.water)", tr("glasses of water", "склянок води", "стаканов воды"))
+                        tile("💪", "\(summary.extras)", tr("extras done", "додаткових", "дополнительных"))
                         tile("👀", "\(summary.eyeBreaks)", tr("eye breaks", "перерв для очей", "перерывов для глаз"))
                         tile("🔥", "\(streak)", tr("day streak", "днів поспіль", "дней подряд"))
                     }

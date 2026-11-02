@@ -146,6 +146,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         actions.resume = { [weak self] in self?.scheduler.resume() }
         actions.showWeekly = { [weak self] in self?.openWeekly(WeeklySummary.weekStart(containing: Date())) }
         actions.previewEyeBreak = { [weak self] in self?.eyeBreak.show(credit: false) }
+        actions.previewBedtime = { [weak self] in self?.bedtime.show(again: false, preview: true) }
         actions.petTapped = { [weak self] in
             guard let self else { return }
             self.store.showWelcome = false
@@ -410,8 +411,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.addItem(check(tr("Pet walks along the Dock", "Улюбленець гуляє над Dock", "Питомец гуляет над Dock"), s.petWalks,
                            #selector(menuToggleWalks)))
         menu.addItem(.separator())
-        let water = "\(store.today.water)/\(s.waterGoal)"
-        menu.addItem(item(tr("💧 A glass of water (\(water))", "💧 Склянка води (\(water))", "💧 Стакан воды (\(water))"), #selector(menuWater)))
 
         let paused = scheduler.isPaused(now)
         let until = Clock.time(store.runtime.pausedUntil ?? now)
@@ -477,7 +476,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func menuTogglePet() { store.settings.petEnabled.toggle() }
     @objc private func menuToggleCountdown() { store.settings.showCountdown.toggle() }
     @objc private func menuToggleWalks() { store.settings.petWalks.toggle() }
-    @objc private func menuWater() { store.logWater() }
     @objc private func menuResume() { scheduler.resume() }
     @objc private func menuQuit() { NSApp.terminate(nil) }
     @objc func menuOpenSettings() { openSettings() }
@@ -610,15 +608,14 @@ extension AppDelegate {
         s.soundEnabled = true
         store.settings = s
         store.pet = PetState(xp: 1420, happiness: 92, totalStandups: 214, totalWarmUps: 131, totalExtras: 58, bestStreak: 9,
-                             totalWater: 96, totalEyeBreaks: 88)
+                             totalEyeBreaks: 88, totalBedtimes: 5)
         var stats: [String: DayStats] = [:]
         for (offset, done) in [6, 7, 6, 8, 6, 4, 6, 7, 5, 6, 8, 6, 3, 6].enumerated() {
             let day = Clock.addDays(-(offset + 1), to: Date())
             stats[Clock.dayKey(day)] = DayStats(standupsDone: done, warmUps: max(0, done - 2), extrasDone: done / 3, activeSeconds: done * 150)
         }
-        stats[store.todayKey] = DayStats(standupsDone: 5, warmUps: 4, snoozed: 1, extrasDone: 2, activeSeconds: 760, water: 5, eyeBreaks: 4)
+        stats[store.todayKey] = DayStats(standupsDone: 5, warmUps: 4, snoozed: 1, extrasDone: 2, activeSeconds: 760, eyeBreaks: 4)
         for key in stats.keys where key != store.todayKey {
-            stats[key]?.water = 6
             stats[key]?.eyeBreaks = 5
         }
         store.stats = stats
@@ -703,7 +700,8 @@ extension AppDelegate {
                 eyeBreak.close()
 
                 for (letter, again) in [("d", false), ("e", true)] {
-                    bedtime.show(again: again)
+                    // Snapshot the first card at the end of its story, asleep in bed.
+                    bedtime.show(again: again, preview: true, startedAt: Date().addingTimeInterval(-BedtimeScenePainter.duration))
                     await wait(1.0)
                     shot(bedtime.contentView, "\(prefix)3\(letter)-bedtime\(again ? "-again" : "")")
                     bedtime.close()

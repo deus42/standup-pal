@@ -66,10 +66,10 @@ extension LocalSyncState {
 enum ProgressMath {
     private static let dayFields: [WritableKeyPath<DayStats, Int>] = [
         \.standupsDone, \.warmUps, \.skipped, \.snoozed, \.missed, \.away, \.extrasDone, \.extrasSkipped, \.activeSeconds,
-        \.water, \.eyeBreaks,
+        \.eyeBreaks,
     ]
     private static let petFields: [WritableKeyPath<PetState, Int>] = [
-        \.xp, \.totalStandups, \.totalWarmUps, \.totalExtras, \.totalWater, \.totalEyeBreaks,
+        \.xp, \.totalStandups, \.totalWarmUps, \.totalExtras, \.totalEyeBreaks, \.totalBedtimes,
     ]
 
     static func plus(_ a: DayStats, _ b: DayStats) -> DayStats {

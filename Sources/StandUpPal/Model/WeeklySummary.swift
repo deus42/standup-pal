@@ -12,7 +12,6 @@ struct WeeklySummary: Equatable {
     let standups: Int
     let warmUps: Int
     let minutes: Int
-    let water: Int
     let eyeBreaks: Int
     let extras: Int
     let goalDays: Int
@@ -33,7 +32,6 @@ struct WeeklySummary: Equatable {
             standups: entries.reduce(0) { $0 + $1.standupsDone },
             warmUps: entries.reduce(0) { $0 + $1.warmUps },
             minutes: entries.reduce(0) { $0 + $1.activeSeconds } / 60,
-            water: entries.reduce(0) { $0 + $1.water },
             eyeBreaks: entries.reduce(0) { $0 + $1.eyeBreaks },
             extras: entries.reduce(0) { $0 + $1.extrasDone },
             goalDays: entries.filter { $0.standupsDone >= max(1, dailyGoal) }.count)

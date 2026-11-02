@@ -20,8 +20,6 @@ struct CustomReminder: Codable, Identifiable, Equatable {
     var weekdays: Set<Int> = [2, 3, 4, 5, 6]
     /// A guided routine to run when the reminder pops up (e.g. physiotherapy).
     var program: ReminderProgram? = nil
-    /// Marking it done also counts a glass of water.
-    var tracksWater = false
 
     var hasProgram: Bool { !(program?.steps.isEmpty ?? true) }
 
@@ -52,7 +50,8 @@ struct CustomReminder: Codable, Identifiable, Equatable {
     static let maxTimes = 6
 
     // Default texts are kept in all three languages so a later language switch can
-    // translate reminders the user hasn't renamed.
+    // translate reminders the user hasn't renamed. The water one is no longer a default
+    // but older installs may still have it.
     private static let templates: [(title: Phrase, note: Phrase)] = [
         (Phrase(en: "10 push-ups", uk: "10 віджимань", ru: "10 отжиманий"),
          Phrase(en: "Knees on the floor totally counts.", uk: "З колін — теж зараховується.", ru: "С колен — тоже засчитывается.")),
@@ -69,9 +68,6 @@ struct CustomReminder: Codable, Identifiable, Equatable {
         [
             CustomReminder(title: templates[0].title.current, emoji: "💪", note: templates[0].note.current,
                            isEnabled: true, mode: .times, times: [11 * 60 + 30, 16 * 60 + 30]),
-            CustomReminder(title: templates[1].title.current, emoji: "💧", note: templates[1].note.current,
-                           isEnabled: false, mode: .interval, intervalMinutes: 120, startMinute: 10 * 60, endMinute: 18 * 60,
-                           tracksWater: true),
             CustomReminder(title: templates[2].title.current, emoji: "🚶", note: templates[2].note.current,
                            isEnabled: false, mode: .times, times: [14 * 60 + 30]),
         ]
@@ -109,7 +105,6 @@ extension CustomReminder {
         endMinute = c.value(.endMinute, endMinute)
         weekdays = c.value(.weekdays, weekdays)
         program = c.value(.program, nil)
-        tracksWater = c.value(.tracksWater, false)
     }
 }
 

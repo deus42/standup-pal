@@ -150,6 +150,13 @@ final class Scheduler: ObservableObject {
         onBedtime?(again)
     }
 
+    /// "Off to bed" on the bedtime card.
+    func wentToBed() {
+        store.pet.totalBedtimes += 1
+        store.award(xp: 3, happiness: 2)
+        afterProgress()
+    }
+
     private func checkWeekly(_ now: Date) {
         guard store.settings.weeklySummary, active == nil, !isWarmUpRunning else { return }
         let start = WeeklySummary.dueWeekStart(now: now, settings: store.settings)
@@ -228,7 +235,6 @@ final class Scheduler: ObservableObject {
                 store.updateToday { $0.extrasDone += 1 }
                 store.pet.totalExtras += 1
                 store.award(xp: 10, happiness: 4)
-                if reminder(for: occ)?.tracksWater == true { store.logWater() }
             }
             store.react(.happy, for: 5)
             SoundPlayer.shared.play(.success)

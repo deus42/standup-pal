@@ -78,6 +78,10 @@ enum PetTalk {
             idle.append(tr("Tie on, glasses on. Ready for meetings. 👔", "Краватка є, окуляри є. До мітингів готові. 👔",
                            "Галстук есть, очки есть. К созвонам готовы. 👔"))
         }
+        if s.petWalks {
+            idle.append(tr("Psst: grab me on the Dock and give me a toss. 🤸", "Пс-с: схопи мене над Dock і підкинь. 🤸",
+                           "Пс-с: схвати меня над Dock и подбрось. 🤸"))
+        }
         return pick(idle, now, nonce)
     }
 
@@ -146,7 +150,7 @@ enum PetTalk {
 
     private static var idleLines: [String] {
         lines([
-            "Sip of water? 💧 I'll wait.",
+            "Wiggle your toes. Nobody's watching. 🦶",
             "Shoulders down, jaw unclenched. There you go.",
             "Blink a few times. Your eyes will thank you. 👀",
             "Every stretch gives me XP. I'm basically a gym pet.",
@@ -159,7 +163,7 @@ enum PetTalk {
             "Fun fact: standing burns more energy than sitting. Science! 🔬",
             "New gear unlocks as we level up. I want the crown. 👑",
         ], [
-            "Ковток води? 💧 Я зачекаю.",
+            "Поворуши пальцями ніг. Ніхто не бачить. 🦶",
             "Плечі вниз, щелепу розслаб. Ось так.",
             "Покліпай кілька разів. Очі скажуть дякую. 👀",
             "Кожна розминка дає мені XP. Я, по суті, фітнес-улюбленець.",
@@ -172,7 +176,7 @@ enum PetTalk {
             "Цікавий факт: стоячи витрачаєш більше енергії, ніж сидячи. Наука! 🔬",
             "Нове спорядження відкривається з рівнями. Я хочу корону. 👑",
         ], [
-            "Глоток воды? 💧 Я подожду.",
+            "Пошевели пальцами ног. Никто не видит. 🦶",
             "Плечи вниз, челюсть расслабь. Вот так.",
             "Поморгай несколько раз. Глаза скажут спасибо. 👀",
             "Каждая разминка даёт мне XP. Я, по сути, фитнес-питомец.",

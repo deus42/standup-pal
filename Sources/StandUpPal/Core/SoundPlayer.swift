@@ -8,7 +8,7 @@ final class SoundPlayer {
     static let shared = SoundPlayer()
 
     enum Cue {
-        case reminder, renudge, success, levelUp, snooze, tick, boop
+        case reminder, renudge, success, levelUp, snooze, tick, boop, goodnight
     }
 
     private var cache: [String: Data] = [:]
@@ -48,6 +48,8 @@ final class SoundPlayer {
             playSynth("tick", volume: v * 0.35) { Synth.tick() }
         case .boop:
             playSynth("boop", volume: v * 0.5) { Synth.boop() }
+        case .goodnight:
+            playSynth("goodnight", volume: v * 0.45) { Synth.goodnight() }
         }
     }
 
@@ -147,6 +149,14 @@ enum Synth {
 
     static func boop() -> [Float] {
         render([Note(freq: 520, at: 0, partials: pop, sweepTo: 760, sweepTime: 0.05)], length: 0.2)
+    }
+
+    /// A soft lullaby going down: time to wind down.
+    static func goodnight() -> [Float] {
+        let notes = [783.99, 659.25, 523.25, 392.0].enumerated().map { index, freq in
+            Note(freq: freq, at: Double(index) * 0.22, gain: 0.75 - Double(index) * 0.1, partials: kalimba)
+        }
+        return render(notes, length: 1.8)
     }
 
     static func render(_ notes: [Note], length: Double) -> [Float] {

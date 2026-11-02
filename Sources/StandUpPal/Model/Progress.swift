@@ -8,8 +8,9 @@ struct PetState: Codable, Equatable {
     var totalWarmUps = 0
     var totalExtras = 0
     var bestStreak = 0
-    var totalWater = 0
     var totalEyeBreaks = 0
+    /// Times you went to bed when the pet asked.
+    var totalBedtimes = 0
 
     var level: Int { Self.levelInfo(xp: xp).level }
 
@@ -37,8 +38,8 @@ extension PetState {
         totalWarmUps = c.value(.totalWarmUps, totalWarmUps)
         totalExtras = c.value(.totalExtras, totalExtras)
         bestStreak = c.value(.bestStreak, bestStreak)
-        totalWater = c.value(.totalWater, totalWater)
         totalEyeBreaks = c.value(.totalEyeBreaks, totalEyeBreaks)
+        totalBedtimes = c.value(.totalBedtimes, totalBedtimes)
     }
 }
 
@@ -52,7 +53,6 @@ struct DayStats: Codable, Equatable {
     var extrasDone = 0
     var extrasSkipped = 0
     var activeSeconds = 0
-    var water = 0
     var eyeBreaks = 0
 }
 
@@ -69,7 +69,6 @@ extension DayStats {
         extrasDone = c.value(.extrasDone, 0)
         extrasSkipped = c.value(.extrasSkipped, 0)
         activeSeconds = c.value(.activeSeconds, 0)
-        water = c.value(.water, 0)
         eyeBreaks = c.value(.eyeBreaks, 0)
     }
 }
