@@ -120,6 +120,7 @@ struct TimeField: View {
 
 struct GeneralSettings: View {
     @EnvironmentObject var store: AppStore
+    @ObservedObject private var sync = CloudSync.shared
     @ViewState private var loginEnabled = LoginItem.isEnabled
     @ViewState private var loginMessage: String?
 
@@ -128,6 +129,7 @@ struct GeneralSettings: View {
             VStack(spacing: 16) {
                 workingHours
                 reminders
+                cloud
             }
             VStack(spacing: 16) {
                 SettingsGroup(title: tr("Language", "Мова", "Язык")) {
@@ -196,6 +198,50 @@ struct GeneralSettings: View {
                     }
                 }
             }
+        }
+    }
+
+    private var cloud: some View {
+        SettingsGroup(title: tr("iCloud sync", "Синхронізація iCloud", "Синхронизация iCloud")) {
+            SettingsToggle(title: tr("Sync settings and progress", "Синхронізувати налаштування й прогрес",
+                                     "Синхронизировать настройки и прогресс"),
+                           subtitle: tr("Across your Macs with the same Apple Account, through iCloud Drive",
+                                        "Між твоїми Mac з тим самим Apple Account, через iCloud Drive",
+                                        "Между твоими Mac с тем же Apple Account, через iCloud Drive"),
+                           isOn: Binding(get: { sync.isEnabled }, set: { sync.setEnabled($0) }))
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: syncSymbol).foregroundStyle(syncTint)
+                Text(sync.statusText)
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 4)
+                if sync.folder != nil {
+                    Button(tr("Show", "Показати", "Показать")) { sync.revealInFinder() }
+                        .controlSize(.small)
+                        .help(tr("Open the StandUp Pal folder in iCloud Drive", "Відкрити папку StandUp Pal в iCloud Drive",
+                                 "Открыть папку StandUp Pal в iCloud Drive"))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+        }
+    }
+
+    private var syncSymbol: String {
+        switch sync.status {
+        case .synced: return "checkmark.icloud.fill"
+        case .syncing: return "arrow.triangle.2.circlepath.icloud.fill"
+        case .off: return "icloud.slash"
+        default: return "exclamationmark.icloud.fill"
+        }
+    }
+
+    private var syncTint: Color {
+        switch sync.status {
+        case .synced: return store.accent
+        case .syncing, .off: return .secondary
+        default: return .orange
         }
     }
 

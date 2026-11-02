@@ -12,12 +12,33 @@ final class AppStore: ObservableObject {
             guard settings != oldValue else { return }
             if settings.language != oldValue.language { applyLanguage() }
             scheduleSave()
+            CloudSync.shared.noteLocalChange(settings: true, progress: false)
         }
     }
-    @Published var reminders: [CustomReminder] { didSet { if reminders != oldValue { scheduleSave() } } }
-    @Published var pet: PetState { didSet { if pet != oldValue { scheduleSave() } } }
-    @Published var stats: [String: DayStats] { didSet { if stats != oldValue { scheduleSave() } } }
+    @Published var reminders: [CustomReminder] {
+        didSet {
+            guard reminders != oldValue else { return }
+            scheduleSave()
+            CloudSync.shared.noteLocalChange(settings: true, progress: false)
+        }
+    }
+    @Published var pet: PetState {
+        didSet {
+            guard pet != oldValue else { return }
+            scheduleSave()
+            CloudSync.shared.noteLocalChange(settings: false, progress: true)
+        }
+    }
+    @Published var stats: [String: DayStats] {
+        didSet {
+            guard stats != oldValue else { return }
+            scheduleSave()
+            CloudSync.shared.noteLocalChange(settings: false, progress: true)
+        }
+    }
     @Published var runtime: RuntimeState { didSet { if runtime != oldValue { scheduleSave() } } }
+    /// iCloud sync bookkeeping for this Mac (never synced itself).
+    @Published var syncState: LocalSyncState { didSet { if syncState != oldValue { scheduleSave() } } }
 
     // Transient
     @Published var reaction: PetMood?
@@ -42,6 +63,7 @@ final class AppStore: ObservableObject {
         static let pet = "pet.v1"
         static let stats = "stats.v1"
         static let runtime = "runtime.v1"
+        static let sync = "sync.v1"
     }
 
     private init() {
@@ -52,6 +74,7 @@ final class AppStore: ObservableObject {
         pet = Self.load(Key.pet) ?? PetState()
         stats = Self.load(Key.stats) ?? [:]
         runtime = Self.load(Key.runtime) ?? RuntimeState()
+        syncState = Self.load(Key.sync) ?? LocalSyncState()
     }
 
     // MARK: Persistence
@@ -82,6 +105,7 @@ final class AppStore: ObservableObject {
         put(pet, Key.pet)
         put(stats, Key.stats)
         put(runtime, Key.runtime)
+        put(syncState, Key.sync)
     }
 
     /// Switches the UI language and translates default reminder texts with it.
@@ -168,6 +192,10 @@ final class AppStore: ObservableObject {
     }
 
     func resetProgress() {
+        // A new epoch tells the other Macs to drop their old contributions too.
+        syncState.epoch = UUID().uuidString
+        syncState.others = [:]
+        syncState.settingsChangedAt = Date()
         pet = PetState()
         stats = [:]
         settings.petHead = .sweatband

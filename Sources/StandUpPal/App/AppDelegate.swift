@@ -74,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self, selector: #selector(systemDidWake), name: NSWorkspace.didWakeNotification, object: nil)
 
         scheduler.start()
+        CloudSync.shared.start()
         refreshStatusItem(force: true)
 
         if !store.runtime.hasOnboarded {
@@ -90,6 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func systemDidWake() {
         scheduler.tick()
+        CloudSync.shared.refresh()
     }
 
     private func handleLaunchArguments() {
@@ -334,6 +336,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func showPopover() {
         guard let button = statusItem.button else { return }
+        CloudSync.shared.refresh()
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()

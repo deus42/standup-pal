@@ -87,8 +87,11 @@ English, **Українська** and **Русский**, switchable live from t
   <img src="docs/screenshots/popover-ru.png" width="260" alt="Russian">
 </p>
 
+### ☁️ Sync across your Macs
+Turn on **iCloud sync** and your settings, reminders and pet progress follow you to every Mac signed in to the same Apple Account. No login and no server: it uses a small **StandUp Pal** folder in your iCloud Drive. Each Mac adds its own XP and stats, so working on two Macs on the same day never loses progress, and resetting progress on one Mac resets it everywhere.
+
 ### 🔒 Private by design
-Everything stays on your Mac: no accounts, no network, no analytics, no telemetry. State lives in `UserDefaults`.
+No accounts of our own, no analytics, no telemetry, and the app never talks to a server. State lives in `UserDefaults` on each Mac and, if you turn on sync, in your own iCloud Drive.
 
 ## 📦 Install
 
@@ -158,7 +161,7 @@ Sources/StandUpPal/
 
 ```bash
 swift build          # debug build
-scripts/test.sh      # 28 tests: scheduling, live ticks, flows, persistence, routines, languages, palettes, gear
+scripts/test.sh      # 36 tests: scheduling, live ticks, flows, persistence, routines, languages, palettes, gear, iCloud sync
 ```
 
 Handy flags for the built binary:
@@ -180,7 +183,7 @@ To start over: `defaults delete com.deus.standuppal`.
 
 Issues and pull requests are welcome: new species, gear, exercises, sounds, or another language. A few house rules keep the app what it is:
 
-- No network access, analytics or bundled assets: draw it or synthesize it.
+- No network access, analytics or bundled assets: draw it or synthesize it. (Sync only writes files to the user's own iCloud Drive folder.)
 - Every user-facing string goes through `tr(en, uk, ru)` (or `Words` for counted nouns). Adding a language means adding a case to `Lang` and a parameter to `tr`, and the compiler will show you every string to translate.
 - Settings tabs must fit without scrolling.
 - Run `scripts/test.sh`, and check your UI with `--snapshot --all-languages`.

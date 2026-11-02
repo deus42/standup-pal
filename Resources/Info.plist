@@ -14,20 +14,20 @@
 	<string>com.deus.standuppal</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>StandUp Pal</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
 		<string>uk</string>
 		<string>ru</string>
 	</array>
+	<key>CFBundleName</key>
+	<string>StandUp Pal</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.0</string>
+	<string>1.2.0</string>
 	<key>CFBundleVersion</key>
-	<string>2</string>
+	<string>3</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.healthcare-fitness</string>
 	<key>LSMinimumSystemVersion</key>
