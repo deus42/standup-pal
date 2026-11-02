@@ -81,6 +81,21 @@ struct PetGallery: View {
             Tile(look: look([.blob, .kitty, .bunny, .bear, .fox, .dino, .hamster][index], id), mood: .idle, t: 1.2)
         })
         rows.append(PetMood.allCases.map { Tile(look: look(.puppy, "caramel", head: .sweatband), mood: $0, t: 0.3) })
+        let dressers: [(PetSpecies, String)] = [(.blob, "mint"), (.kitty, "sky"), (.bear, "caramel"), (.panda, "graphite"),
+                                                (.frog, "matcha"), (.penguin, "midnight"), (.bunny, "cherry")]
+        for phase in DayPhase.allCases {
+            rows.append(dressers.map { species, id in
+                Tile(look: look(species, id, head: .sweatband, hands: .dumbbells).dressed(for: phase),
+                     mood: phase == .night ? .sleepy : .idle, t: 1.2)
+            })
+        }
+        rows.append([Tile(look: look(.booty, "peach").dressed(for: .home), mood: .idle, t: 9.5),
+                     Tile(look: look(.booty, "peach").dressed(for: .morning), mood: .idle, t: 1.2),
+                     Tile(look: look(.booty, "peach").dressed(for: .night), mood: .sleepy, t: 1.2),
+                     Tile(look: look(.booty, "peach", head: .shades).dressed(for: .work), mood: .alert, t: 0.3),
+                     Tile(look: look(.fox, "tangerine").dressed(for: .work), mood: .happy, t: 0.3),
+                     Tile(look: look(.hamster, "blush").dressed(for: .morning), mood: .happy, t: 0.3),
+                     Tile(look: look(.axolotl, "bubblegum").dressed(for: .night), mood: .sleepy, t: 1.2)])
         return rows
     }
 
@@ -109,6 +124,14 @@ struct PetGallery: View {
                             Text(motion.rawValue).font(.system(size: 10)).foregroundColor(.gray)
                         }
                     }
+                }
+            }
+            HStack(spacing: 10) {
+                ForEach(DayPhase.allCases, id: \.self) { phase in
+                    PetCanvas(look: look(.blob, "mint", head: .sweatband).dressed(for: phase), mood: phase == .night ? .sleepy : .idle,
+                              t: 0, effects: false, zoom: 1.14)
+                        .frame(width: 21, height: 21)
+                        .background(Color(white: 0.92))
                 }
             }
             HStack(spacing: 10) {

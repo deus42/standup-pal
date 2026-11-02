@@ -87,6 +87,8 @@ struct RuntimeState: Codable, Equatable {
     var achievementsPrimed = false
     /// Start of the last week whose summary card was shown.
     var weeklyShownKey = ""
+    /// When the pet last sent you to bed.
+    var bedtimeNudgedAt: Date?
 }
 
 extension RuntimeState {
@@ -102,6 +104,7 @@ extension RuntimeState {
         seenAchievements = c.value(.seenAchievements, [])
         achievementsPrimed = c.value(.achievementsPrimed, false)
         weeklyShownKey = c.value(.weeklyShownKey, "")
+        bedtimeNudgedAt = c.value(.bedtimeNudgedAt, nil)
     }
 }
 

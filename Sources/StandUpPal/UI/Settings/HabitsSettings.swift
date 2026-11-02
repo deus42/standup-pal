@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Small healthy habits around the stand-ups: water, eye breaks, the weekly card and the
-/// walking pet.
+/// Small healthy habits around the stand-ups: water, eye breaks, the weekly card, the
+/// walking pet and the pet's day (outfits and bedtime).
 struct HabitsSettings: View {
     @EnvironmentObject var store: AppStore
     let actions: AppActions
@@ -41,6 +41,13 @@ struct HabitsSettings: View {
                             .fixedSize()
                     }
                 }
+                SettingsGroup(title: tr("Walking pet", "Улюбленець на прогулянці", "Питомец на прогулке")) {
+                    SettingsToggle(title: tr("Let the pet walk along the Dock", "Хай улюбленець гуляє над Dock", "Пусть питомец гуляет над Dock"),
+                                   subtitle: tr("It strolls, sleeps after bedtime and hops when it's time to stand up. Click it for a boop.",
+                                                "Гуляє, спить після відбою й підстрибує, коли час вставати. Клацни — і він зрадіє.",
+                                                "Гуляет, спит после отбоя и подпрыгивает, когда пора вставать. Кликни — и он обрадуется."),
+                                   isOn: $store.settings.petWalks, divider: false)
+                }
             }
             VStack(spacing: 16) {
                 SettingsGroup(title: tr("Eye breaks", "Перерви для очей", "Перерывы для глаз"),
@@ -66,15 +73,31 @@ struct HabitsSettings: View {
                         }
                     }
                 }
-                SettingsGroup(title: tr("Walking pet", "Улюбленець на прогулянці", "Питомец на прогулке")) {
-                    SettingsToggle(title: tr("Let the pet walk along the Dock", "Хай улюбленець гуляє над Dock", "Пусть питомец гуляет над Dock"),
-                                   subtitle: tr("It strolls, naps after work and hops when it's time to stand up. Click it for a boop.",
-                                                "Гуляє, дрімає після роботи й підстрибує, коли час вставати. Клацни — і він зрадіє.",
-                                                "Гуляет, дремлет после работы и подпрыгивает, когда пора вставать. Кликни — и он обрадуется."),
-                                   isOn: $store.settings.petWalks, divider: false)
+                SettingsGroup(title: tr("Pet's day", "День улюбленця", "День питомца"),
+                              footer: tr("After bedtime the pet sleeps, and while you're still at the Mac it asks you to step away, every half hour.",
+                                         "Після відбою улюбленець спить, а поки ти за компом, щопівгодини проситиме від нього відійти.",
+                                         "После отбоя питомец спит, а пока ты за компом, каждые полчаса будет просить от него отойти.")) {
+                    SettingsToggle(title: tr("Dress for the time of day", "Одяг за часом доби", "Одежда по времени суток"),
+                                   subtitle: tr("A tie at work, pyjamas and coffee at home", "Краватка на роботі, піжама й кава вдома",
+                                                "Галстук на работе, пижама и кофе дома"),
+                                   isOn: $store.settings.dayOutfits)
+                    SettingsRow(title: tr("Bedtime", "Відбій", "Отбой")) {
+                        Picker("", selection: $store.settings.bedtimeMinute) {
+                            ForEach(bedtimeChoices, id: \.self) { Text(Clock.time(minute: $0)).tag($0) }
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                    SettingsToggle(title: tr("Send me to bed too", "Відправляти спати й мене", "Отправлять спать и меня"),
+                                   isOn: $store.settings.bedtimeNudge, divider: false)
                 }
             }
         }
+    }
+
+    private var bedtimeChoices: [Int] {
+        let current = store.settings.bedtimeMinute
+        return DayRhythm.bedtimeChoices.contains(current) ? DayRhythm.bedtimeChoices : (DayRhythm.bedtimeChoices + [current]).sorted()
     }
 }
 

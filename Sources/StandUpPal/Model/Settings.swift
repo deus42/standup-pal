@@ -235,6 +235,11 @@ struct AppSettings: Codable, Equatable {
     var weeklySummary = true
     var petWalks = false
 
+    // Day rhythm
+    var dayOutfits = true
+    var bedtimeMinute = 20 * 60
+    var bedtimeNudge = true
+
     // Warm-up
     var warmUpLength: WarmUpLength = .standard
     var speakExercises = false
@@ -288,6 +293,9 @@ extension AppSettings {
         eyeBreakMinutes = c.value(.eyeBreakMinutes, eyeBreakMinutes)
         weeklySummary = c.value(.weeklySummary, weeklySummary)
         petWalks = c.value(.petWalks, petWalks)
+        dayOutfits = c.value(.dayOutfits, dayOutfits)
+        bedtimeMinute = c.value(.bedtimeMinute, bedtimeMinute)
+        bedtimeNudge = c.value(.bedtimeNudge, bedtimeNudge)
         warmUpLength = c.value(.warmUpLength, warmUpLength)
         speakExercises = c.value(.speakExercises, speakExercises)
         getReadyCountdown = c.value(.getReadyCountdown, getReadyCountdown)

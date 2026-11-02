@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let reminderPanel = ReminderPanelController()
     private let warmUp = WarmUpController()
     private let eyeBreak = EyeBreakController()
+    private let bedtime = BedtimeController()
     private let weekly = WeeklyCardController()
     private let desktopPet = DesktopPetController()
     private var settingsWindow: NSWindow?
@@ -53,6 +54,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         scheduler.onRenudge = { [weak self] in self?.reminderPanel.nudge() }
         scheduler.onEyeBreak = { [weak self] in self?.eyeBreak.show() }
         scheduler.onWeekly = { [weak self] start in self?.openWeekly(start) }
+        scheduler.onBedtime = { [weak self] again in
+            guard !CommandLine.arguments.contains("--snapshot") else { return }
+            self?.bedtime.show(again: again)
+        }
         store.$settings
             .map(\.petWalks)
             .removeDuplicates()
@@ -269,10 +274,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let s = store.settings
         let now = scheduler.now
         let mood = scheduler.petMood(at: now)
-        let signature = "\(s.petEnabled)|\(mood.rawValue)|\(PetLook.from(s))"
+        let look = scheduler.dressedLook(at: now)
+        let signature = "\(s.petEnabled)|\(mood.rawValue)|\(look)"
         if force || signature != iconSignature {
             iconSignature = signature
-            rebuildIcon(mood: mood)
+            rebuildIcon(mood: mood, look: look)
         }
         let text = s.showCountdown ? statusText(now) : ""
         if force || text != lastTitle {
@@ -294,7 +300,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         return Clock.shortCountdown(seconds)
     }
 
-    private func rebuildIcon(mood: PetMood) {
+    private func rebuildIcon(mood: PetMood, look: PetLook) {
         iconTimer?.invalidate()
         iconTimer = nil
         guard let button = statusItem.button else { return }
@@ -314,7 +320,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return
         }
 
-        let look = PetLook.from(s)
         if mood == .alert {
             iconFrames = (0..<8).compactMap { PetIcon.image(look: look, mood: .alert, t: Double($0) / 16) }
             iconFrameIndex = 0
@@ -669,6 +674,16 @@ extension AppDelegate {
                 await wait(1.2)
                 shot(popover.contentViewController?.view, "\(prefix)1-popover")
                 popover.performClose(nil)
+                for (letter, phase) in [("b", DayPhase.morning), ("c", .home), ("d", .night)] {
+                    scheduler.phaseOverride = phase
+                    showPopover()
+                    await wait(1.2)
+                    shot(popover.contentViewController?.view, "\(prefix)1\(letter)-popover-\(phase.rawValue)")
+                    if phase == .night { shot(statusItem.button, "\(prefix)0b-menu-bar-night", background: .controlBackgroundColor) }
+                    popover.performClose(nil)
+                }
+                scheduler.phaseOverride = nil
+                await wait(0.3)
 
                 actions.previewStandup()
                 await wait(1.2)
@@ -686,6 +701,13 @@ extension AppDelegate {
                 await wait(1.0)
                 shot(eyeBreak.contentView, "\(prefix)3b-eye-break")
                 eyeBreak.close()
+
+                for (letter, again) in [("d", false), ("e", true)] {
+                    bedtime.show(again: again)
+                    await wait(1.0)
+                    shot(bedtime.contentView, "\(prefix)3\(letter)-bedtime\(again ? "-again" : "")")
+                    bedtime.close()
+                }
 
                 openWeekly(WeeklySummary.weekStart(containing: Date()))
                 await wait(1.2)

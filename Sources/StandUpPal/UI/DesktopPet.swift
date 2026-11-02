@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// The pet strolling along the top of the Dock. Opt-in, and it keeps to itself: it walks,
-/// rests, sleeps outside work hours and hops when it's time to stand up.
+/// The pet strolling along the top of the Dock. Opt-in, and it keeps to itself: it walks
+/// (in pyjamas after work), sleeps after bedtime and hops when it's time to stand up.
 @MainActor
 final class DesktopPetController {
     private let model = DesktopPetModel()
@@ -73,6 +73,8 @@ final class DesktopPetController {
         let dt = min(0.2, now.timeIntervalSince(last))
         last = now
         let mood = Scheduler.shared.petMood(at: now)
+        let look = Scheduler.shared.dressedLook(at: now)
+        if model.look != look { model.look = look }
         let frame = screen.visibleFrame
         model.update(dt: dt, mood: mood, minX: frame.minX, maxX: frame.maxX - size.width, now: now)
         panel.setFrameOrigin(NSPoint(x: model.x, y: frame.minY - 8))
@@ -84,6 +86,7 @@ final class DesktopPetModel: ObservableObject {
     @Published var walking = false
     @Published var facingLeft = false
     @Published var mood: PetMood = .idle
+    @Published var look: PetLook?
     var x: CGFloat = 0
     private var phaseUntil = Date()
     private let speed: CGFloat = 22
@@ -115,7 +118,7 @@ struct DesktopPetView: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { timeline in
-            PetCanvas(look: store.petLook, mood: model.mood,
+            PetCanvas(look: model.look ?? store.petLook, mood: model.mood,
                       t: timeline.date.timeIntervalSince1970.truncatingRemainder(dividingBy: 86_400),
                       effects: model.mood == .alert || model.mood == .sleepy || model.mood == .happy,
                       motion: model.walking ? .walk : nil)

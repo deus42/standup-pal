@@ -14,42 +14,9 @@ final class EyeBreakController {
 
     func show(credit: Bool = true) {
         close()
-        let store = AppStore.shared
         let view = EyeBreakView(started: Date(), onClose: { [weak self] in self?.close() })
-            .environmentObject(store)
-        let hosting = NSHostingView(rootView: view)
-        hosting.translatesAutoresizingMaskIntoConstraints = false
-        let size = hosting.fittingSize
-
-        let effect = NSVisualEffectView(frame: NSRect(origin: .zero, size: size))
-        effect.material = .popover
-        effect.blendingMode = .behindWindow
-        effect.state = .active
-        effect.maskImage = ReminderPanelController.roundedMask(radius: 18)
-        effect.addSubview(hosting)
-        NSLayoutConstraint.activate([
-            hosting.leadingAnchor.constraint(equalTo: effect.leadingAnchor),
-            hosting.trailingAnchor.constraint(equalTo: effect.trailingAnchor),
-            hosting.topAnchor.constraint(equalTo: effect.topAnchor),
-            hosting.bottomAnchor.constraint(equalTo: effect.bottomAnchor),
-        ])
-
-        let panel = FloatingPanel(contentRect: NSRect(origin: .zero, size: size),
-                                  styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.contentView = effect
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
-        panel.level = .statusBar
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        let visible = (NSScreen.main ?? NSScreen.screens.first)?.visibleFrame ?? .zero
-        panel.setFrameOrigin(NSPoint(x: visible.maxX - size.width - 14, y: visible.maxY - size.height - 10))
-        panel.alphaValue = 0
-        panel.orderFrontRegardless()
-        NSAnimationContext.runAnimationGroup { $0.duration = 0.3; panel.animator().alphaValue = 1 }
-        self.panel = panel
+            .environmentObject(AppStore.shared)
+        panel = CornerCard.present(view)
 
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
@@ -66,8 +33,7 @@ final class EyeBreakController {
         finish = nil
         guard let panel else { return }
         self.panel = nil
-        NSAnimationContext.runAnimationGroup({ $0.duration = 0.25; panel.animator().alphaValue = 0 },
-                                             completionHandler: { panel.orderOut(nil) })
+        CornerCard.dismiss(panel)
     }
 }
 
@@ -84,7 +50,7 @@ struct EyeBreakView: View {
                 ZStack {
                     ProgressRing(progress: min(1, elapsed / EyeBreakController.seconds), lineWidth: 4, tint: store.accent)
                     if store.settings.petEnabled {
-                        PetCanvas(look: store.petLook, mood: .exercise,
+                        PetCanvas(look: Scheduler.shared.dressedLook(at: timeline.date), mood: .exercise,
                                   t: timeline.date.timeIntervalSince1970.truncatingRemainder(dividingBy: 86_400),
                                   effects: false, motion: .eyes)
                             .padding(5)

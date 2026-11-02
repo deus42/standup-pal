@@ -49,23 +49,9 @@ enum PetTalk {
         }
 
         let done = store.today.standupsDone
-        if !scheduler.isWorkingTime(now) {
-            let isWorkDay = s.workDays.contains(Clock.weekday(now))
-            if isWorkDay, Clock.minuteOfDay(now) < s.workStartMinute, let next = scheduler.nextStandup {
-                let time = Clock.time(next)
-                return tr("Good morning! ☀️ First stretch at \(time).", "Доброго ранку! ☀️ Перша розминка о \(time).",
-                          "Доброе утро! ☀️ Первая разминка в \(time).")
-            }
-            if done > 0 {
-                let count = Words.breaks(done)
-                return tr("Off the clock! \(count) today. Proud of you. 🌙",
-                          "Робочий день скінчився! Сьогодні на рахунку \(count). Пишаюся тобою. 🌙",
-                          "Рабочий день окончен! Сегодня на счету \(count). Горжусь тобой. 🌙")
-            }
-            return pick(lines(["Zzz… it's not work o'clock. 💤", "Off the clock! Go do something fun. 🌙", "Resting my tiny legs for the next work day."],
-                              ["Хр-р… зараз не робочий час. 💤", "Робочий день позаду! Займися чимось приємним. 🌙", "Відпочиваю лапками до наступного робочого дня."],
-                              ["Хр-р… сейчас не рабочее время. 💤", "Рабочий день позади! Займись чем-нибудь приятным. 🌙", "Отдыхаю лапками до следующего рабочего дня."]),
-                        now, nonce)
+        let phase = scheduler.dayPhase(at: now)
+        if phase != .work {
+            return offTheClock(phase, store: store, scheduler: scheduler, now: now)
         }
 
         if let next = scheduler.nextStandup {
@@ -87,7 +73,71 @@ enum PetTalk {
                               ["Денну мету розгромлено! Ти легенда. 🏆", "Уже \(count) сьогодні! Мої лапки пишаються твоїми ногами."],
                               ["Дневная цель разгромлена! Ты легенда. 🏆", "Уже \(count) сегодня! Мои лапки гордятся твоими ногами."]), now, nonce)
         }
-        return pick(idleLines, now, nonce)
+        var idle = idleLines
+        if s.dayOutfits {
+            idle.append(tr("Tie on, glasses on. Ready for meetings. 👔", "Краватка є, окуляри є. До мітингів готові. 👔",
+                           "Галстук есть, очки есть. К созвонам готовы. 👔"))
+        }
+        return pick(idle, now, nonce)
+    }
+
+    /// Mornings with coffee, evenings at home, and bed after bedtime.
+    private static func offTheClock(_ phase: DayPhase, store: AppStore, scheduler: Scheduler, now: Date) -> String {
+        let s = store.settings
+        let nonce = store.talkNonce
+        let done = store.today.standupsDone
+        let bed = Clock.time(minute: s.bedtimeMinute)
+        let isWorkDay = s.workDays.contains(Clock.weekday(now))
+        let cosy = s.dayOutfits
+
+        switch phase {
+        case .night:
+            return pick(lines(["It's past \(bed). I'm off to bed 💤 You too: step away from the computer.",
+                               "Zzz… The laptop wants to sleep too. Close it? 🌙",
+                               "Still here? 👀 We stretch tomorrow, so get some sleep.",
+                               "Lights off, blanket on. Good night! 🌙"],
+                              ["Уже після \(bed). Я йду спати 💤 І тобі час відійти від компа.",
+                               "Хр-р… Ноутбук теж хоче спати. Закриємо? 🌙",
+                               "Ти ще тут? 👀 Завтра розминаємось, тож треба виспатися.",
+                               "Світло вимкнено, ковдра на місці. Надобраніч! 🌙"],
+                              ["Уже после \(bed). Я иду спать 💤 И тебе пора отойти от компа.",
+                               "Хр-р… Ноутбук тоже хочет спать. Закроем? 🌙",
+                               "Ты ещё тут? 👀 Завтра разминаемся, так что надо выспаться.",
+                               "Свет выключен, одеяло на месте. Спокойной ночи! 🌙"]), now, nonce)
+        case .morning:
+            if isWorkDay, let next = scheduler.nextStandup {
+                let time = Clock.time(next)
+                return cosy
+                    ? tr("Good morning! ☀️ Coffee first ☕ First stretch at \(time).",
+                         "Доброго ранку! ☀️ Спершу кава ☕ Перша розминка о \(time).",
+                         "Доброе утро! ☀️ Сначала кофе ☕ Первая разминка в \(time).")
+                    : tr("Good morning! ☀️ First stretch at \(time).", "Доброго ранку! ☀️ Перша розминка о \(time).",
+                         "Доброе утро! ☀️ Первая разминка в \(time).")
+            }
+            return tr("Slow morning, no work today. ☕ Enjoy it!", "Повільний ранок, сьогодні без роботи. ☕ Насолоджуйся!",
+                      "Неспешное утро, сегодня без работы. ☕ Наслаждайся!")
+        case .home, .work:
+            if done > 0, isWorkDay {
+                let count = Words.breaks(done)
+                return tr("Off the clock! \(count) today. Proud of you. 🏠",
+                          "Робочий день скінчився! Сьогодні на рахунку \(count). Пишаюся тобою. 🏠",
+                          "Рабочий день окончен! Сегодня на счету \(count). Горжусь тобой. 🏠")
+            }
+            if !isWorkDay {
+                return pick(lines(["Day off! Pyjama day? 🏠", "No work today. Maybe a walk? 🌳"],
+                                  ["Вихідний! Може, день у піжамі? 🏠", "Сьогодні без роботи. Може, на прогулянку? 🌳"],
+                                  ["Выходной! Может, день в пижаме? 🏠", "Сегодня без работы. Может, на прогулку? 🌳"]), now, nonce)
+            }
+            return pick(lines([cosy ? "Pyjamas on! Work can wait until tomorrow. 🏠" : "Off the clock! Go do something fun. 🌙",
+                               "Cosy evening. Do something nice for yourself. 🧸",
+                               "Bedtime is at \(bed). Until then, rest. 🌙"],
+                              [cosy ? "Піжаму вдягнуто! Робота почекає до завтра. 🏠" : "Робочий день позаду! Займися чимось приємним. 🌙",
+                               "Затишний вечір. Зроби щось приємне для себе. 🧸",
+                               "Відбій о \(bed). А до того — відпочинок. 🌙"],
+                              [cosy ? "Пижама надета! Работа подождёт до завтра. 🏠" : "Рабочий день позади! Займись чем-нибудь приятным. 🌙",
+                               "Уютный вечер. Сделай что-нибудь приятное для себя. 🧸",
+                               "Отбой в \(bed). А до тех пор — отдых. 🌙"]), now, nonce)
+        }
     }
 
     static func deviceName(_ reason: String) -> String {

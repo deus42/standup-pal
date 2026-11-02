@@ -56,7 +56,7 @@ struct PopoverView: View {
             SpeechBubble(text: PetTalk.line(store: store, scheduler: scheduler, now: now))
                 .frame(maxWidth: 290)
             if s.petEnabled {
-                PetView(look: store.petLook, mood: mood)
+                PetView(look: scheduler.dressedLook(at: now), mood: mood)
                     .frame(width: 124, height: 124)
                     .contentShape(Circle())
                     .onTapGesture { actions.petTapped() }

@@ -24,6 +24,8 @@ struct PetLook: Equatable {
     var head: HeadGear
     var hands: HandGear
     var neck: NeckGear
+    /// Dressed for this part of the day; nil shows the gear as picked.
+    var outfit: DayPhase? = nil
 
     init(species: PetSpecies, color: RGB, belly: RGB? = nil,
          head: HeadGear = .none, hands: HandGear = .none, neck: NeckGear = .none) {
@@ -39,6 +41,22 @@ struct PetLook: Equatable {
         PetLook(species: s.petSpecies, color: RGB(hex: s.petColorHex),
                 belly: s.petBellyHex.isEmpty ? nil : RGB(hex: s.petBellyHex),
                 head: s.petHead, hands: s.petHands, neck: s.petNeck)
+    }
+
+    /// The same pet dressed for a part of the day. At work it keeps its head and hand
+    /// gear and wears a tie; at home and in bed the gym gear comes off.
+    func dressed(for phase: DayPhase?) -> PetLook {
+        var look = self
+        look.outfit = phase
+        switch phase {
+        case nil: break
+        case .work: look.neck = .none
+        case .morning, .home, .night:
+            look.head = .none
+            look.hands = .none
+            look.neck = .none
+        }
+        return look
     }
 }
 
@@ -139,10 +157,13 @@ struct PetPainter {
             drawBodyBack(&body)
         } else {
             drawBody(&body)
+            if wearsPyjamas { drawPyjamas(&body) }
             drawFace(&body, pose: p)
             drawNeckGear(&body)
+            if look.outfit == .work { drawTie(&body) }
         }
         drawHeadGear(&body, back: facing.back)
+        if look.outfit == .night { drawNightcap(&body, back: facing.back) }
         drawHeldGear(&body, pose: p)
         if effects { drawEffects(&ctx, pose: p, back: facing.back) }
     }
@@ -233,7 +254,7 @@ struct PetPainter {
             exercisePose(&p)
         }
         // Holding something: keep it clear of the body.
-        if look.hands != .none, p.armL < 60 {
+        if look.hands != .none || look.outfit == .morning, p.armL < 60 {
             p.armL += 9
             p.armR += 9
         }
@@ -555,7 +576,17 @@ struct PetPainter {
         let rect = wing ? CGRect(x: -4.7, y: -3, width: 9.4, height: 17) : CGRect(x: -4.2, y: -3, width: 8.4, height: 18)
         let shape = Path(roundedRect: rect, cornerRadius: wing ? 4.7 : 4.2)
         let fill: RGB = species == .panda ? look.color : bodyRGB.darker(wing ? 0.1 : 0.06)
-        a.fill(shape, with: .color(fill.color))
+        if wearsPyjamas {
+            // A striped sleeve with the paw peeking out.
+            a.fill(shape, with: .color(pyjamaRGB.color))
+            var inside = a
+            inside.clip(to: shape)
+            inside.fill(Path(CGRect(x: -1.2, y: -3, width: 2.4, height: 20)), with: .color(.white.opacity(0.5)))
+            inside.fill(Path(CGRect(x: -6, y: rect.maxY - 5.5, width: 12, height: 6)), with: .color(fill.color))
+            inside.fill(Path(CGRect(x: -6, y: rect.maxY - 6.6, width: 12, height: 1.4)), with: .color(pyjamaRGB.darker(0.3).color))
+        } else {
+            a.fill(shape, with: .color(fill.color))
+        }
         a.stroke(shape, with: .color(outline), lineWidth: 1.7)
     }
 
@@ -656,11 +687,12 @@ struct PetPainter {
         inside.fill(Path(ellipseIn: CGRect(x: 56, y: 80 - wiggle, width: 11, height: 6.5)), with: .color(blush.opacity(0.42)))
         inside.fill(Path(ellipseIn: CGRect(x: 34, y: 72 + wiggle, width: 8, height: 4)), with: .color(.white.opacity(0.5)))
         inside.fill(Path(ellipseIn: CGRect(x: 57, y: 72 - wiggle, width: 8, height: 4)), with: .color(.white.opacity(0.5)))
+        if wearsPyjamas { drawPyjamaSeat(&inside, wiggle: wiggle) }
 
         g.stroke(path, with: .color(outline), lineWidth: 2.4)
 
         var crease = Path()
-        crease.move(to: CGPoint(x: 50, y: 75))
+        crease.move(to: CGPoint(x: 50, y: wearsPyjamas ? 82 : 75))
         crease.addQuadCurve(to: CGPoint(x: 50, y: 91), control: CGPoint(x: 48.6, y: 84))
         g.stroke(crease, with: .color(outline), style: StrokeStyle(lineWidth: 2.1, lineCap: .round))
         for side in [-1.0, 1.0] {
@@ -703,7 +735,10 @@ struct PetPainter {
         }
 
         drawNose(&g)
-        if look.head != .shades { drawEyes(&g, eyes, pose: pose) }
+        if look.head != .shades {
+            drawEyes(&g, eyes, pose: pose)
+            if look.outfit == .work { drawGlasses(&g) }
+        }
         drawMouth(&g)
     }
 
@@ -1085,6 +1120,12 @@ struct PetPainter {
     }
 
     private func drawHeldGear(_ g: inout GraphicsContext, pose p: Pose) {
+        if look.outfit == .morning {
+            held(&g, left: false, angle: p.armR, upright: true) { g in
+                g.scaleBy(x: 1.15, y: 1.15)
+                mug(&g)
+            }
+        }
         switch look.hands {
         case .none:
             break
@@ -1175,6 +1216,220 @@ struct PetPainter {
             g.stroke(part, with: .color(edge), style: StrokeStyle(lineWidth: 1.1, lineJoin: .round))
         }
         g.fill(star(center: CGPoint(x: 0, y: -7.6), radius: 2.3), with: .color(gold.lighter(0.6).color))
+    }
+
+    // MARK: Outfits
+
+    private var wearsPyjamas: Bool { look.outfit == .morning || look.outfit == .home || look.outfit == .night }
+
+    /// Sky-blue pyjamas, or pink ones on a bluish pet.
+    private var pyjamaRGB: RGB {
+        let c = look.color
+        let bluish = c.b > c.r + 0.06 && c.b > c.g - 0.04
+        return bluish ? RGB(r: 0.97, g: 0.66, b: 0.79) : RGB(r: 0.55, g: 0.76, b: 0.97)
+    }
+
+    /// A red tie, or a navy one on a reddish pet.
+    private var tieRGB: RGB {
+        let c = look.color
+        let reddish = c.r > c.g + 0.12 && c.r > c.b + 0.08
+        return reddish ? RGB(r: 0.22, g: 0.33, b: 0.72) : RGB(r: 0.87, g: 0.26, b: 0.34)
+    }
+
+    private var pyjamaNeckline: Path {
+        var p = Path()
+        p.move(to: CGPoint(x: 10, y: 71.5))
+        p.addQuadCurve(to: CGPoint(x: 90, y: 71.5), control: CGPoint(x: 50, y: 81))
+        return p
+    }
+
+    /// A striped pyjama top over the lower body, with a collar and two buttons.
+    private func drawPyjamas(_ g: inout GraphicsContext) {
+        let pj = pyjamaRGB
+        var top = pyjamaNeckline
+        top.addLine(to: CGPoint(x: 90, y: 100))
+        top.addLine(to: CGPoint(x: 10, y: 100))
+        top.closeSubpath()
+        var cloth = g
+        cloth.clip(to: bodyPath)
+        cloth.fill(top, with: .color(pj.color))
+        var stripes = cloth
+        stripes.clip(to: top)
+        for x in stride(from: 21.0, through: 80, by: 7) {
+            stripes.fill(Path(CGRect(x: x, y: 60, width: 2.4, height: 40)), with: .color(.white.opacity(0.5)))
+        }
+        cloth.stroke(pyjamaNeckline, with: .color(pj.darker(0.3).color), lineWidth: 1.6)
+        g.stroke(bodyPath, with: .color(outline), lineWidth: 2.4)
+
+        for side in [-1.0, 1.0] {
+            var flap = Path()
+            flap.move(to: CGPoint(x: 50 + side * 0.8, y: 76.4))
+            flap.addLine(to: CGPoint(x: 50 + side * 10, y: 74))
+            flap.addQuadCurve(to: CGPoint(x: 50 + side * 2.6, y: 82.4), control: CGPoint(x: 50 + side * 9.6, y: 80.6))
+            flap.closeSubpath()
+            g.fill(flap, with: .color(pj.lighter(0.5).color))
+            g.stroke(flap, with: .color(pj.darker(0.35).color), style: StrokeStyle(lineWidth: 1.1, lineJoin: .round))
+        }
+        for y in [83.6, 87.8] {
+            let button = Path(ellipseIn: CGRect(x: 48.6, y: y, width: 2.8, height: 2.8))
+            g.fill(button, with: .color(.white))
+            g.stroke(button, with: .color(pj.darker(0.4).color), lineWidth: 0.7)
+        }
+    }
+
+    /// Booty's pyjamas from behind, butt flap included.
+    private func drawPyjamaSeat(_ g: inout GraphicsContext, wiggle: Double) {
+        let pj = pyjamaRGB
+        var cloth = g
+        cloth.fill(Path(CGRect(x: 10, y: 64, width: 80, height: 40)), with: .color(pj.color))
+        for x in stride(from: 21.0, through: 80, by: 7) {
+            cloth.fill(Path(CGRect(x: x, y: 64, width: 2.4, height: 40)), with: .color(.white.opacity(0.5)))
+        }
+        for x in [29.0, 49.0] {
+            let dy = x < 40 ? wiggle : -wiggle
+            cloth.fill(Path(ellipseIn: CGRect(x: x + 1, y: 79 + dy, width: 20, height: 13)), with: .color(pj.darker(0.12).color.opacity(0.55)))
+            cloth.fill(Path(ellipseIn: CGRect(x: x + 4, y: 71 + dy, width: 13, height: 6)), with: .color(.white.opacity(0.3)))
+        }
+        cloth.fill(Path(CGRect(x: 10, y: 63.4, width: 80, height: 1.6)), with: .color(pj.darker(0.3).color))
+        let flap = Path(roundedRect: CGRect(x: 38, y: 69.5, width: 24, height: 12.5), cornerRadius: 3.5)
+        cloth.fill(flap, with: .color(pj.darker(0.06).color))
+        cloth.stroke(flap, with: .color(pj.darker(0.38).color), style: StrokeStyle(lineWidth: 1.2, dash: [2.2, 1.6]))
+        for x in [41.2, 58.8] {
+            let button = Path(ellipseIn: CGRect(x: x - 1.5, y: 71.2, width: 3, height: 3))
+            cloth.fill(button, with: .color(.white))
+            cloth.stroke(button, with: .color(pj.darker(0.4).color), lineWidth: 0.7)
+        }
+    }
+
+    /// Office mode: a shirt collar and a striped tie.
+    private func drawTie(_ g: inout GraphicsContext) {
+        let tie = tieRGB
+        let shirt = Color(.sRGB, red: 0.99, green: 0.99, blue: 1)
+        let seam = Color(.sRGB, red: 0.55, green: 0.58, blue: 0.68)
+        for side in [-1.0, 1.0] {
+            var flap = Path()
+            flap.move(to: CGPoint(x: 50, y: 74.6))
+            flap.addLine(to: CGPoint(x: 50 + side * 11.5, y: 70.4))
+            flap.addLine(to: CGPoint(x: 50 + side * 6.4, y: 80.4))
+            flap.closeSubpath()
+            g.fill(flap, with: .color(shirt))
+            g.stroke(flap, with: .color(seam), style: StrokeStyle(lineWidth: 1.1, lineJoin: .round))
+        }
+        var blade = Path()
+        blade.move(to: CGPoint(x: 47.9, y: 78.6))
+        blade.addLine(to: CGPoint(x: 52.1, y: 78.6))
+        blade.addLine(to: CGPoint(x: 55, y: 87.4))
+        blade.addLine(to: CGPoint(x: 50, y: 91.6))
+        blade.addLine(to: CGPoint(x: 45, y: 87.4))
+        blade.closeSubpath()
+        var b = g
+        b.clip(to: bodyPath)
+        b.fill(blade, with: .linearGradient(Gradient(colors: [tie.lighter(0.15).color, tie.darker(0.08).color]),
+                                            startPoint: CGPoint(x: 50, y: 78), endPoint: CGPoint(x: 50, y: 92)))
+        var stripes = b
+        stripes.clip(to: blade)
+        for k in stride(from: 0.0, through: 18, by: 4.6) {
+            var line = Path()
+            line.move(to: CGPoint(x: 42, y: 83 + k))
+            line.addLine(to: CGPoint(x: 58, y: 75 + k))
+            stripes.stroke(line, with: .color(.white.opacity(0.4)), lineWidth: 1.3)
+        }
+        b.stroke(blade, with: .color(tie.darker(0.45).color), style: StrokeStyle(lineWidth: 1.1, lineJoin: .round))
+        let knot = Path(roundedRect: CGRect(x: 47.1, y: 74.2, width: 5.8, height: 5), cornerRadius: 1.7)
+        g.fill(knot, with: .color(tie.darker(0.06).color))
+        g.stroke(knot, with: .color(tie.darker(0.45).color), lineWidth: 1.1)
+    }
+
+    /// Round office glasses around the eyes.
+    private func drawGlasses(_ g: inout GraphicsContext) {
+        let eyes = eyeCenters
+        let r: Double = species == .frog || species == .panda ? 8.4 : 7.5
+        let frame = Color(.sRGB, red: 0.2, green: 0.17, blue: 0.3)
+        for e in eyes {
+            let lens = Path(ellipseIn: CGRect(x: e.x - r, y: e.y - r, width: r * 2, height: r * 2))
+            g.fill(lens, with: .color(.white.opacity(0.16)))
+            var glare = Path()
+            glare.move(to: CGPoint(x: e.x - r * 0.55, y: e.y + r * 0.2))
+            glare.addLine(to: CGPoint(x: e.x - r * 0.2, y: e.y - r * 0.5))
+            g.stroke(glare, with: .color(.white.opacity(0.6)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+            g.stroke(lens, with: .color(frame), lineWidth: 1.5)
+        }
+        var bridge = Path()
+        bridge.move(to: CGPoint(x: eyes[0].x + r, y: eyes[0].y - 1))
+        bridge.addQuadCurve(to: CGPoint(x: eyes[1].x - r, y: eyes[1].y - 1), control: CGPoint(x: 50, y: eyes[0].y - 4))
+        bridge.move(to: CGPoint(x: eyes[0].x - r, y: eyes[0].y - 1.5))
+        bridge.addLine(to: CGPoint(x: max(19.5, eyes[0].x - r - 6), y: eyes[0].y - 3))
+        bridge.move(to: CGPoint(x: eyes[1].x + r, y: eyes[1].y - 1.5))
+        bridge.addLine(to: CGPoint(x: min(80.5, eyes[1].x + r + 6), y: eyes[1].y - 3))
+        g.stroke(bridge, with: .color(frame), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+    }
+
+    /// A floppy striped nightcap with a pompom.
+    private func drawNightcap(_ g: inout GraphicsContext, back: Bool) {
+        var h = g
+        if back {
+            h.translateBy(x: 100, y: 0)
+            h.scaleBy(x: -1, y: 1)
+        }
+        if species == .frog {
+            h.translateBy(x: 50, y: 33)
+            h.scaleBy(x: 0.55, y: 0.55)
+            h.translateBy(x: -50, y: -40)
+        }
+        let pj = pyjamaRGB
+        let sway = sin(t * 0.9) * 1.6
+        var cone = Path()
+        cone.move(to: CGPoint(x: 31, y: 39))
+        cone.addCurve(to: CGPoint(x: 80 + sway, y: 34), control1: CGPoint(x: 33, y: 14), control2: CGPoint(x: 68, y: 9))
+        cone.addCurve(to: CGPoint(x: 69, y: 39), control1: CGPoint(x: 75, y: 25), control2: CGPoint(x: 70, y: 29))
+        cone.closeSubpath()
+        h.fill(cone, with: .linearGradient(Gradient(colors: [pj.lighter(0.25).color, pj.color]),
+                                           startPoint: CGPoint(x: 40, y: 15), endPoint: CGPoint(x: 70, y: 39)))
+        var stripes = h
+        stripes.clip(to: cone)
+        for k in stride(from: 0.0, through: 30, by: 8) {
+            var band = Path()
+            band.move(to: CGPoint(x: 30 + k, y: 12))
+            band.addLine(to: CGPoint(x: 44 + k, y: 40))
+            stripes.stroke(band, with: .color(.white.opacity(0.5)), lineWidth: 2.6)
+        }
+        h.stroke(cone, with: .color(pj.darker(0.45).color), style: StrokeStyle(lineWidth: 1.6, lineJoin: .round))
+        let trim = Path(roundedRect: CGRect(x: 28.5, y: 35.2, width: 43, height: 6.6), cornerRadius: 3.3)
+        h.fill(trim, with: .color(Color(white: 0.98)))
+        h.stroke(trim, with: .color(pj.darker(0.4).color), lineWidth: 1.3)
+        let pom = Path(ellipseIn: CGRect(x: 75.6 + sway, y: 30, width: 9, height: 9))
+        h.fill(pom, with: .color(Color(white: 0.98)))
+        h.stroke(pom, with: .color(pj.darker(0.4).color), lineWidth: 1.3)
+    }
+
+    /// Morning coffee in a cosy mug, steaming.
+    private func mug(_ g: inout GraphicsContext) {
+        let cup = RGB(r: 1.0, g: 0.97, b: 0.92)
+        let edge = Color(.sRGB, red: 0.52, green: 0.42, blue: 0.38)
+        let handle = Path(ellipseIn: CGRect(x: 3.4, y: -3.8, width: 6.2, height: 7.2))
+        g.stroke(handle, with: .color(edge), lineWidth: 3.3)
+        g.stroke(handle, with: .color(cup.color), lineWidth: 1.6)
+        let body = Path(roundedRect: CGRect(x: -5.8, y: -6.2, width: 11.6, height: 12.8), cornerRadius: 2.8)
+        g.fill(body, with: .linearGradient(Gradient(colors: [cup.color, cup.darker(0.1).color]),
+                                           startPoint: CGPoint(x: -5, y: -6), endPoint: CGPoint(x: 5, y: 6)))
+        g.stroke(body, with: .color(edge), lineWidth: 1.1)
+        g.fill(Path(ellipseIn: CGRect(x: -4.8, y: -7.2, width: 9.6, height: 2.8)), with: .color(Color(.sRGB, red: 0.45, green: 0.27, blue: 0.17)))
+        var heart = Path()
+        heart.move(to: CGPoint(x: 0, y: 3.4))
+        heart.addCurve(to: CGPoint(x: 0, y: -1), control1: CGPoint(x: -4.2, y: 0.6), control2: CGPoint(x: -2, y: -3.2))
+        heart.addCurve(to: CGPoint(x: 0, y: 3.4), control1: CGPoint(x: 2, y: -3.2), control2: CGPoint(x: 4.2, y: 0.6))
+        g.fill(heart, with: .color(Color(.sRGB, red: 1, green: 0.45, blue: 0.52)))
+        for i in 0..<2 {
+            let phase = (t * 0.5 + Double(i) * 0.5).truncatingRemainder(dividingBy: 1)
+            let x = Double(i) * 3.8 - 1.9
+            var steam = g
+            steam.opacity = sin(phase * .pi) * 0.95
+            var wisp = Path()
+            wisp.move(to: CGPoint(x: x, y: -9 - phase * 3))
+            wisp.addCurve(to: CGPoint(x: x, y: -17 - phase * 4),
+                          control1: CGPoint(x: x + 2.6, y: -11.5 - phase * 3), control2: CGPoint(x: x - 2.6, y: -14.5 - phase * 4))
+            steam.stroke(wisp, with: .color(Color(white: 0.58)), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+        }
     }
 
     // MARK: Effects

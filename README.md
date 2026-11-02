@@ -77,7 +77,11 @@ Plus a daily goal, streaks (days off never break one), happiness, a 14-day chart
 - **Water:** tap + in the popover after each glass (goal 8 by default), or let a reminder count glasses.
 - **Eye breaks (20-20-20):** every 30 minutes a small, silent card asks you to look into the distance for 20 seconds while the pet does the same. It never shows during a call or right before a stand-up.
 - **Weekly card:** on Friday after work you get a card with your week (stand-ups, warm-ups, minutes, water, streak), ready to copy or save as a PNG and post.
-- **Walking pet:** let the pet stroll along the top of your Dock. It naps after work and hops when it's time to stand up.
+- **Walking pet:** let the pet stroll along the top of your Dock. It sleeps after bedtime and hops when it's time to stand up.
+
+### 🌙 The pet's day
+- **Dressed for the time of day:** a shirt collar, tie and glasses in work hours; pyjamas and a steaming coffee in the morning; pyjamas at home in the evening and on days off. Booty's pyjamas have a butt flap.
+- **Bedtime (20:00 by default):** the pet puts on a nightcap and goes to sleep. If you're still at the Mac, a small card asks you to step away, and asks again every half hour while you stay. "Off to bed" turns the screen off. Change the time or switch either part off in Settings › Habits.
 
 ### 🧠 Smart, not naggy
 - **Already away?** No keyboard or mouse for 5+ minutes when a stand-up is due counts as done, and stays quiet.

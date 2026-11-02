@@ -40,6 +40,10 @@ final class Scheduler: ObservableObject {
     var onEyeBreak: (() -> Void)?
     /// The start of the week whose summary card should open.
     var onWeekly: ((Date) -> Void)?
+    /// Time for bed; `again` when you've been sent once already tonight.
+    var onBedtime: ((_ again: Bool) -> Void)?
+    /// Pins the part of the day, for snapshots.
+    var phaseOverride: DayPhase?
 
     private let store = AppStore.shared
     private var timer: Timer?
@@ -94,6 +98,7 @@ final class Scheduler: ObservableObject {
         housekeepActive(now)
         refreshUpcoming(now)
         checkWeekly(now)
+        checkBedtime(now, paused: paused)
 
         if let toast = store.toast, toast.expires < now { store.toast = nil }
         if store.reaction != nil, store.reactionUntil < now { store.reaction = nil }
@@ -129,6 +134,20 @@ final class Scheduler: ObservableObject {
         store.pet.totalEyeBreaks += 1
         store.award(xp: 2, happiness: 1)
         afterProgress()
+    }
+
+    /// After bedtime the pet goes to sleep and sends you away from the Mac, again every
+    /// half hour while you're still at it.
+    private func checkBedtime(_ now: Date, paused: Bool) {
+        guard !paused, active == nil, queue.isEmpty, !isWarmUpRunning, phaseOverride == nil else { return }
+        let last = store.runtime.bedtimeNudgedAt
+        guard DayRhythm.bedtimeNudgeDue(now: now, last: last, settings: store.settings) else { return }
+        // Already away from the screen: exactly the idea.
+        guard Presence.idleSeconds() < Self.awaySeconds else { return }
+        if store.settings.holdDuringCalls, Presence.callReason() != nil { return }
+        let again = last.map { now.timeIntervalSince($0) < 12 * 3600 } ?? false
+        store.runtime.bedtimeNudgedAt = now
+        onBedtime?(again)
     }
 
     private func checkWeekly(_ now: Date) {
@@ -447,10 +466,25 @@ final class Scheduler: ObservableObject {
         if trimmed != upcoming { upcoming = trimmed }
     }
 
+    func dayPhase(at now: Date = Date()) -> DayPhase {
+        phaseOverride ?? DayRhythm.phase(at: now, settings: store.settings)
+    }
+
+    /// The pet as it looks right now: dressed for the time of day, unless that's off.
+    func dressedLook(at now: Date = Date()) -> PetLook {
+        store.petLook.dressed(for: store.settings.dayOutfits ? dayPhase(at: now) : nil)
+    }
+
     func petMood(at now: Date = Date()) -> PetMood {
         if active != nil || (holdReason != nil && !queue.isEmpty) { return .alert }
         if let reaction = store.reaction, store.reactionUntil > now { return reaction }
-        if isPaused(now) || !isWorkingTime(now) { return .sleepy }
+        if isPaused(now) { return .sleepy }
+        switch dayPhase(at: now) {
+        case .night: return .sleepy
+        // Up and about at home: no sulking over missed stretches.
+        case .morning, .home: return .idle
+        case .work: break
+        }
         if store.pet.happiness < 30 { return .sad }
         return .idle
     }

@@ -162,7 +162,7 @@ struct ReminderCardView: View {
     @ViewBuilder
     private var avatar: some View {
         if store.settings.petEnabled {
-            PetView(look: store.petLook, mood: .alert)
+            PetView(look: Scheduler.shared.dressedLook(), mood: .alert)
                 .frame(width: 88, height: 88)
         } else {
             ZStack {
