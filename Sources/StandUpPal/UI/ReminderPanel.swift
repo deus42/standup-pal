@@ -227,7 +227,12 @@ struct ReminderCardView: View {
                 }
                 .buttonStyle(PillButtonStyle(prominent: true, tint: store.accent))
                 HStack(spacing: 6) {
-                    Button { onAction(.stoodUp) } label: { Label(tr("Stood up", "Уже стою", "Уже стою"), systemImage: "checkmark") }
+                    Button { onAction(.stoodUp) } label: {
+                        Label(tr("Done, no warm-up", "Без розминки", "Без разминки"), systemImage: "checkmark")
+                    }
+                    .help(tr("Counts this stand-up as done (+10 XP) without the guided warm-up.",
+                             "Зараховує перерву (+10 XP) без розминки з таймером.",
+                             "Засчитывает перерыв (+10 XP) без разминки с таймером."))
                     if occurrence.snoozeCount < 3 {
                         let snooze = store.settings.snoozeMinutes
                         Button { onAction(.snooze(snooze)) } label: { Label(Words.minutes(snooze), systemImage: "moon.zzz") }
