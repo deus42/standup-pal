@@ -12,7 +12,9 @@ final class AppStore: ObservableObject {
             guard settings != oldValue else { return }
             if settings.language != oldValue.language { applyLanguage() }
             scheduleSave()
-            CloudSync.shared.noteLocalChange(settings: true, progress: false)
+            if settings.keepingLocalChoices(of: oldValue) != oldValue {
+                CloudSync.shared.noteLocalChange(settings: true, progress: false)
+            }
         }
     }
     @Published var reminders: [CustomReminder] {

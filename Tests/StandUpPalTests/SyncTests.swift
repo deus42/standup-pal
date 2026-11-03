@@ -114,6 +114,32 @@ struct SyncTests {
         #expect(b.side.settings.petName == "Rex" && b.side.settings.dailyGoal == 9)
     }
 
+    @Test func eachMacKeepsItsOwnWalkingPet() {
+        var cloud = SyncSnapshot()
+        var a = Mac(name: "A")
+        var b = Mac(name: "B")
+        _ = a.sync(&cloud, at: t(0))
+        _ = b.sync(&cloud, at: t(1))
+
+        a.edit({ $0.petWalks = true; $0.dailyGoal = 7 }, at: t(2))
+        _ = a.sync(&cloud, at: t(3))
+        let plan = b.sync(&cloud, at: t(4))
+        #expect(plan.adoptedSettings && b.side.settings.dailyGoal == 7 && !b.side.settings.petWalks)
+
+        b.edit({ $0.petWalks = true }, at: t(5))
+        a.edit({ $0.petWalks = false }, at: t(6))
+        _ = a.sync(&cloud, at: t(7))
+        _ = b.sync(&cloud, at: t(8))
+        #expect(!a.side.settings.petWalks && b.side.settings.petWalks)
+
+        // Flipping only the walking pet isn't a change worth uploading.
+        var walks = AppSettings()
+        walks.petWalks = true
+        #expect(walks.keepingLocalChoices(of: AppSettings()) == AppSettings())
+        walks.dailyGoal = 3
+        #expect(walks.keepingLocalChoices(of: AppSettings()) != AppSettings())
+    }
+
     @Test func resettingProgressOnOneMacResetsItEverywhere() {
         var cloud = SyncSnapshot()
         var a = Mac(name: "A", pet: PetState(xp: 300))

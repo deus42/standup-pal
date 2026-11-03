@@ -250,6 +250,16 @@ struct AppSettings: Codable, Equatable {
 }
 
 extension AppSettings {
+    /// These settings with this Mac's own choices kept: the walking pet suits one desk and
+    /// not another, so it never syncs.
+    func keepingLocalChoices(of local: AppSettings) -> AppSettings {
+        var s = self
+        s.petWalks = local.petWalks
+        return s
+    }
+}
+
+extension AppSettings {
     private enum LegacyKeys: String, CodingKey {
         case petAccessory
     }

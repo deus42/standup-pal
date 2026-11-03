@@ -166,8 +166,9 @@ enum SyncEngine {
                     resetOwn = !firstSync
                     sync.epoch = shared.epoch
                 }
-                adopted = side.settings != shared.settings || side.reminders != shared.reminders
-                side.settings = shared.settings
+                let settings = shared.settings.keepingLocalChoices(of: side.settings)
+                adopted = side.settings != settings || side.reminders != shared.reminders
+                side.settings = settings
                 side.reminders = shared.reminders
                 sync.settingsAppliedAt = shared.updatedAt
             }

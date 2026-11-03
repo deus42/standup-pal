@@ -55,6 +55,7 @@ Blob the gym buddy, Kitty the yoga master, Bear the powerlifter, Penguin the swi
 
 - Seven animated moods: it dozes outside work hours, waves when it's time, sweats through warm-ups, celebrates your wins and sulks (a little) when you skip.
 - **28 two-tone palettes** (body + belly) plus any custom colour. The whole app picks up your pet's colour.
+- **Walking pet:** tick it in Settings › Pet (each Mac decides for itself) and the pet strolls along the top of your Dock. Play with it: drag it around, toss it (it bounces off the screen edges and gets dizzy if you overdo it), double-click for a backflip, or stroke it with the cursor. Its eyes follow the cursor, it hops when it's time to stand up, and after bedtime it sleeps in its own little bed.
 - Don't want a pet? Untick **Pet** for a clean SF Symbol and the same reminders.
 
 <details>
@@ -77,7 +78,6 @@ Plus a daily goal, streaks (days off never break one), happiness, a 14-day chart
 ### 🌿 Small healthy habits
 - **Eye breaks (20-20-20):** every 30 minutes a small, silent card asks you to look into the distance for 20 seconds while the pet does the same. It never shows during a call or right before a stand-up.
 - **Weekly card:** on Friday after work you get a card with your week (stand-ups, warm-ups, minutes, extras, eye breaks, streak), ready to copy or save as a PNG and post.
-- **Walking pet:** let the pet stroll along the top of your Dock, and play with it: drag it around, toss it (it bounces off the screen edges and gets dizzy if you overdo it), double-click for a backflip, or stroke it with the cursor. Its eyes follow the cursor, it hops when it's time to stand up, and after bedtime it sleeps in its own little bed.
 
 ### 🌙 The pet's day
 - **Dressed for the time of day:** a shirt collar, tie and glasses in work hours; pyjamas and a steaming coffee in the morning; pyjamas at home in the evening and on days off. Booty's pyjamas have a butt flap.
@@ -100,7 +100,7 @@ English, **Українська** and **Русский**, switchable live from t
 </p>
 
 ### ☁️ Sync across your Macs
-Turn on **iCloud sync** and your settings, reminders and pet progress follow you to every Mac signed in to the same Apple Account. No login and no server: it uses a small **StandUp Pal** folder in your iCloud Drive. Each Mac adds its own XP and stats, so working on two Macs on the same day never loses progress, and resetting progress on one Mac resets it everywhere.
+Turn on **iCloud sync** and your settings, reminders and pet progress follow you to every Mac signed in to the same Apple Account. No login and no server: it uses a small **StandUp Pal** folder in your iCloud Drive. Each Mac adds its own XP and stats, so working on two Macs on the same day never loses progress, and resetting progress on one Mac resets it everywhere. The walking pet is the one setting each Mac keeps for itself.
 
 ### 🔒 Private by design
 No accounts of our own, no analytics, no telemetry, and the app never talks to a server. State lives in `UserDefaults` on each Mac and, if you turn on sync, in your own iCloud Drive.
@@ -179,7 +179,7 @@ Sources/StandUpPal/
 
 ```bash
 swift build          # debug build
-scripts/test.sh      # 52 tests: scheduling, live ticks, flows, persistence, routines, languages, palettes, gear, sync, updates, programs, habits
+scripts/test.sh      # 63 tests: scheduling, live ticks, flows, persistence, routines, languages, palettes, gear, sync, updates, programs, habits, voices
 ```
 
 Handy flags for the built binary:

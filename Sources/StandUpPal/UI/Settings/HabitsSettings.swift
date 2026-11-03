@@ -1,34 +1,13 @@
 import SwiftUI
 
-/// Small healthy habits around the stand-ups: eye breaks, the weekly card, the walking
-/// pet and the pet's day (outfits and bedtime).
+/// Small healthy habits around the stand-ups: eye breaks, the weekly card and the pet's
+/// day (outfits and bedtime).
 struct HabitsSettings: View {
     @EnvironmentObject var store: AppStore
     let actions: AppActions
 
     var body: some View {
         HStack(alignment: .top, spacing: 18) {
-            VStack(spacing: 16) {
-                SettingsGroup(title: tr("Weekly summary", "Підсумок тижня", "Итог недели"),
-                              footer: tr("A card with your week, ready to save or post. It opens on Friday after work.",
-                                         "Картка з твоїм тижнем, яку можна зберегти чи запостити. Відкривається в п'ятницю після роботи.",
-                                         "Карточка с твоей неделей, которую можно сохранить или запостить. Открывается в пятницу после работы.")) {
-                    SettingsToggle(title: tr("Show it every Friday", "Показувати щоп'ятниці", "Показывать каждую пятницу"),
-                                   isOn: $store.settings.weeklySummary)
-                    SettingsRow(title: tr("This week so far", "Цей тиждень", "Эта неделя"), divider: false) {
-                        Button(tr("Open the card", "Відкрити картку", "Открыть карточку")) { actions.showWeekly() }
-                            .buttonStyle(PillButtonStyle(compact: true))
-                            .fixedSize()
-                    }
-                }
-                SettingsGroup(title: tr("Walking pet", "Улюбленець на прогулянці", "Питомец на прогулке")) {
-                    SettingsToggle(title: tr("Let the pet walk along the Dock", "Хай улюбленець гуляє над Dock", "Пусть питомец гуляет над Dock"),
-                                   subtitle: tr("Drag it, toss it, double-click for a flip, or stroke it with the cursor. It sleeps in its bed after bedtime.",
-                                                "Тягай, підкидай, двічі клацни — сальто, або погладь курсором. Після відбою спить у ліжечку.",
-                                                "Таскай, подбрасывай, кликни дважды — сальто, или погладь курсором. После отбоя спит в кроватке."),
-                                   isOn: $store.settings.petWalks, divider: false)
-                }
-            }
             VStack(spacing: 16) {
                 SettingsGroup(title: tr("Eye breaks", "Перерви для очей", "Перерывы для глаз"),
                               footer: tr("The 20-20-20 rule: regularly look about 6 metres away for 20 seconds. A small card counts down, without sound, and never during a call.",
@@ -53,6 +32,20 @@ struct HabitsSettings: View {
                         }
                     }
                 }
+                SettingsGroup(title: tr("Weekly summary", "Підсумок тижня", "Итог недели"),
+                              footer: tr("A card with your week, ready to save or post. It opens on Friday after work.",
+                                         "Картка з твоїм тижнем, яку можна зберегти чи запостити. Відкривається в п'ятницю після роботи.",
+                                         "Карточка с твоей неделей, которую можно сохранить или запостить. Открывается в пятницу после работы.")) {
+                    SettingsToggle(title: tr("Show it every Friday", "Показувати щоп'ятниці", "Показывать каждую пятницу"),
+                                   isOn: $store.settings.weeklySummary)
+                    SettingsRow(title: tr("This week so far", "Цей тиждень", "Эта неделя"), divider: false) {
+                        Button(tr("Open the card", "Відкрити картку", "Открыть карточку")) { actions.showWeekly() }
+                            .buttonStyle(PillButtonStyle(compact: true))
+                            .fixedSize()
+                    }
+                }
+            }
+            VStack(spacing: 16) {
                 SettingsGroup(title: tr("Pet's day", "День улюбленця", "День питомца"),
                               footer: tr("At bedtime the pet shuts its laptop and goes to bed, and while you're still at the Mac it asks you to log off, every half hour.",
                                          "О відбої улюбленець закриває ноутбук і йде спати, а поки ти за компом, щопівгодини проситиме відключатися.",

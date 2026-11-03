@@ -166,6 +166,13 @@ struct PetHeaderCard: View {
                           "Показывать питомца в строке меню и напоминаниях"), isOn: $store.settings.petEnabled)
                     .toggleStyle(.checkbox)
                     .font(.system(size: 12))
+                Toggle(tr("Let it walk along the Dock (this Mac only)", "Хай гуляє над Dock (лише на цьому Mac)",
+                          "Пусть гуляет над Dock (только на этом Mac)"), isOn: $store.settings.petWalks)
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 12))
+                    .help(tr("Drag it, toss it, double-click for a flip, or stroke it with the cursor. It sleeps in its bed after bedtime.",
+                             "Тягай, підкидай, двічі клацни — сальто, або погладь курсором. Після відбою спить у ліжечку.",
+                             "Таскай, подбрасывай, кликни дважды — сальто, или погладь курсором. После отбоя спит в кроватке."))
             }
             Spacer(minLength: 0)
         }
