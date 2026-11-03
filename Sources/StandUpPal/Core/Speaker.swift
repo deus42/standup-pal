@@ -4,6 +4,9 @@ import AVFoundation
 /// Reads warm-ups aloud. macOS comes with only a small "compact" voice for most languages,
 /// and it sounds robotic. Enhanced and Premium voices sound far better but have to be
 /// downloaded in System Settings, so the best installed voice wins unless one was chosen.
+/// Ukrainian has no better system voice at all, so its built-in phrases ship as clips
+/// rendered with a neural voice (`scripts/render-voice.py`), and only custom exercise names
+/// fall back to the system voice.
 @MainActor
 final class Speaker {
     static let shared = Speaker()
@@ -12,12 +15,23 @@ final class Speaker {
     var isMuted = false
 
     private let synth = AVSpeechSynthesizer()
+    private var player: AVAudioPlayer?
 
-    func say(_ text: String) {
+    /// Speaks `text`, or plays its clip (an exercise ID or a phrase key) when there is one.
+    func say(_ text: String, clip: String? = nil) {
         guard !isMuted else { return }
         let settings = AppStore.shared.settings
+        let chosen = settings.speechVoices[L10n.lang.rawValue]
+        player?.stop()
+        if let url = Self.clipURL(clip, lang: L10n.lang, chosen: chosen), let clipPlayer = try? AVAudioPlayer(contentsOf: url) {
+            synth.stopSpeaking(at: .immediate)
+            clipPlayer.volume = Float(max(0.2, settings.volume))
+            clipPlayer.play()
+            player = clipPlayer
+            return
+        }
         synth.stopSpeaking(at: .word)
-        let voice = Self.voice(for: L10n.lang, chosen: settings.speechVoices[L10n.lang.rawValue])
+        let voice = Self.voice(for: L10n.lang, chosen: chosen)
         let utterance = AVSpeechUtterance(string: Self.spoken(text))
         utterance.voice = voice
         // Basic voices rush through words at the default speed.
@@ -29,11 +43,24 @@ final class Speaker {
     func preview() {
         say(tr("Time to stretch. Shoulder rolls. Great job!",
                "Час розім'ятися. Кола плечима. Чудова робота!",
-               "Пора размяться. Круги плечами. Отличная работа!"))
+               "Пора размяться. Круги плечами. Отличная работа!"), clip: "preview")
     }
 
     func stop() {
+        player?.stop()
         synth.stopSpeaking(at: .immediate)
+    }
+
+    // MARK: Clips
+
+    /// A clip plays when the language has them and no system voice was picked instead.
+    nonisolated static func clipURL(_ key: String?, lang: Lang, chosen: String?, bundle: Bundle = .main) -> URL? {
+        guard let key, chosen?.isEmpty ?? true else { return nil }
+        return bundle.url(forResource: key, withExtension: "m4a", subdirectory: "Voice/\(lang.rawValue)")
+    }
+
+    nonisolated static func hasClips(_ lang: Lang) -> Bool {
+        clipURL("preview", lang: lang, chosen: nil) != nil
     }
 
     // MARK: Voices

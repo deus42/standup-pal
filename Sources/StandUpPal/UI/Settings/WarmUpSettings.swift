@@ -77,22 +77,31 @@ struct WarmUpSettings: View {
         let _ = voicesVersion
         let lang = L10n.lang
         let voices = Speaker.voices(for: lang)
-        let current = Speaker.voice(for: lang, chosen: store.settings.speechVoices[lang.rawValue])
+        let chosen = store.settings.speechVoices[lang.rawValue]
+        let current = Speaker.voice(for: lang, chosen: chosen)
         let basic = current.map { $0.quality == .default } ?? true
-        SettingsRow(title: tr("Voice", "Голос", "Голос"), divider: basic) {
+        // Languages with built-in clips have no better system voice to download.
+        let builtIn = Speaker.hasClips(lang)
+        let ownExercises = builtIn && (chosen ?? "").isEmpty
+            ? tr("Your own exercises are read by \(current?.name ?? "the system voice").",
+                 "Свої вправи читає «\(current?.name ?? "системний голос")».",
+                 "Свои упражнения читает «\(current?.name ?? "системный голос")».")
+            : nil
+        SettingsRow(title: tr("Voice", "Голос", "Голос"), subtitle: ownExercises, divider: basic && !builtIn) {
             HStack(spacing: 10) {
                 Button(tr("Listen", "Прослухати", "Прослушать")) { Speaker.shared.preview() }
                     .buttonStyle(PillButtonStyle(compact: true))
                     .fixedSize()
                 Picker("", selection: voiceBinding(lang, installed: voices)) {
-                    Text(tr("Best installed", "Найкращий встановлений", "Лучший установленный")).tag("")
+                    Text(builtIn ? tr("Built-in (Mykyta)", "Вбудований (Микита)", "Встроенный (Микита)")
+                                 : tr("Best installed", "Найкращий встановлений", "Лучший установленный")).tag("")
                     ForEach(voices, id: \.identifier) { Text(Speaker.label($0)).tag($0.identifier) }
                 }
                 .labelsHidden()
                 .fixedSize()
             }
         }
-        if basic {
+        if basic && !builtIn {
             let name = current?.name ?? tr("a voice", "голос", "голос")
             SettingsRow(title: tr("Get a clearer voice", "Чистіший голос", "Более чистый голос"),
                         subtitle: tr("Basic voices sound robotic. Download the Enhanced version of \(name) from the list of voices.",

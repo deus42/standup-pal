@@ -43,7 +43,7 @@ It's a native macOS app: a few megabytes of Swift, no Electron, no accounts, no 
 - 21 built-in desk-friendly exercises, including physio favourites like chin tucks, shoulder-blade squeezes and desk push-ups. Switch any of them off, or **add your own**.
 - The pet **demonstrates every move**: it reaches, marches, twists, side-bends, squats and breathes along with you.
 - Countdown ring, "up next" preview, pause/skip/end, optional spoken exercise names, and confetti at the end.
-- Spoken exercise names use the best voice installed on your Mac. The bundled voices sound robotic, so Settings › Warm-up › Voice lets you listen, pick a voice, and open System Settings to download an Enhanced one (for Ukrainian, that's Lesya Enhanced).
+- Spoken exercise names use the best voice installed on your Mac, and Settings › Warm-up › Voice lets you listen, pick another one, or download an Enhanced voice. macOS has no good Ukrainian voice, so in Ukrainian the built-in exercises and phrases are read by **Mykyta**, a neural voice pre-rendered into the app; your own exercises fall back to the system voice.
 
 ### 💪 Your own exercise reminders
 - Push-ups, water, a walk, anything: pick an emoji and a note, set times ("11:30 and 16:30") or an interval ("every 2 h, 10:00–18:00"), and the days.
@@ -201,7 +201,7 @@ To start over: `defaults delete com.deus.standuppal`.
 
 Issues and pull requests are welcome: new species, gear, exercises, sounds, or another language. A few house rules keep the app what it is:
 
-- No network access, analytics or bundled assets: draw it or synthesize it. (Sync only writes files to the user's own iCloud Drive folder.)
+- No network access, analytics or bundled assets: draw it or synthesize it. The one exception is the pre-rendered Ukrainian speech in `Resources/Voice/uk` (`scripts/render-voice.py`). (Sync only writes files to the user's own iCloud Drive folder.)
 - Every user-facing string goes through `tr(en, uk, ru)` (or `Words` for counted nouns). Adding a language means adding a case to `Lang` and a parameter to `tr`, and the compiler will show you every string to translate.
 - Settings tabs must fit without scrolling.
 - Run `scripts/test.sh`, and check your UI with `--snapshot --all-languages`.

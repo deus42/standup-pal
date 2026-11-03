@@ -59,6 +59,9 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/$EXECUTABLE"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
+# Pre-rendered speech clips (see scripts/render-voice.py).
+ditto "$ROOT/Resources/Voice" "$APP/Contents/Resources/Voice"
+rm -f "$APP/Contents/Resources/Voice/"*/clips.json
 
 echo "→ Rendering icon…"
 ICON_WORK="$(mktemp -d)"

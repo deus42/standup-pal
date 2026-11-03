@@ -49,7 +49,7 @@ final class WarmUpSession: ObservableObject {
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t
-        if phase == .exercising { announce() } else { speak(tr("Get ready", "Приготуйся", "Приготовься")) }
+        if phase == .exercising { announce() } else { speak(tr("Get ready", "Приготуйся", "Приготовься"), clip: "getReady") }
     }
 
     private func tick() {
@@ -103,7 +103,11 @@ final class WarmUpSession: ObservableObject {
         phase = .finished
         stopTimer()
         SoundPlayer.shared.play(.success)
-        speak(completedFully ? tr("Great job!", "Чудова робота!", "Отличная работа!") : tr("Nice work!", "Молодець!", "Молодец!"))
+        if completedFully {
+            speak(tr("Great job!", "Чудова робота!", "Отличная работа!"), clip: "greatJob")
+        } else {
+            speak(tr("Nice work!", "Молодець!", "Молодец!"), clip: "niceWork")
+        }
         onComplete?(self)
     }
 
@@ -118,12 +122,12 @@ final class WarmUpSession: ObservableObject {
     }
 
     private func announce() {
-        speak(current.name)
+        speak(current.name, clip: current.id)
     }
 
-    private func speak(_ text: String) {
+    private func speak(_ text: String, clip: String) {
         guard AppStore.shared.settings.speakExercises else { return }
-        Speaker.shared.say(text)
+        Speaker.shared.say(text, clip: clip)
     }
 }
 
