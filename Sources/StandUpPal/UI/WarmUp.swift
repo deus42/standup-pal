@@ -1,5 +1,4 @@
 import AppKit
-import AVFoundation
 import SwiftUI
 
 /// Runs one guided warm-up: optional get-ready countdown, then each exercise on a timer.
@@ -28,7 +27,6 @@ final class WarmUpSession: ObservableObject {
 
     private var timer: Timer?
     private var lastTick = Date()
-    private let speech = AVSpeechSynthesizer()
 
     init(routine: [Exercise], occurrence: Occurrence?, getReady: Bool, title: String? = nil) {
         self.routine = routine.isEmpty ? Array(ExerciseLibrary.builtIn.prefix(1)) : routine
@@ -111,7 +109,7 @@ final class WarmUpSession: ObservableObject {
 
     func stop() {
         stopTimer()
-        speech.stopSpeaking(at: .immediate)
+        Speaker.shared.stop()
     }
 
     private func stopTimer() {
@@ -124,13 +122,8 @@ final class WarmUpSession: ObservableObject {
     }
 
     private func speak(_ text: String) {
-        let s = AppStore.shared.settings
-        guard s.speakExercises else { return }
-        speech.stopSpeaking(at: .word)
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: L10n.lang.speechCode)
-        utterance.volume = Float(max(0.2, s.volume))
-        speech.speak(utterance)
+        guard AppStore.shared.settings.speakExercises else { return }
+        Speaker.shared.say(text)
     }
 }
 

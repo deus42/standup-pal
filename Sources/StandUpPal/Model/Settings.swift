@@ -242,6 +242,8 @@ struct AppSettings: Codable, Equatable {
     // Warm-up
     var warmUpLength: WarmUpLength = .standard
     var speakExercises = false
+    /// Voice identifier per language code; missing or not installed means the best installed voice.
+    var speechVoices: [String: String] = [:]
     var getReadyCountdown = true
     var disabledExerciseIDs: Set<String> = []
     var customExercises: [Exercise] = []
@@ -296,6 +298,7 @@ extension AppSettings {
         bedtimeNudge = c.value(.bedtimeNudge, bedtimeNudge)
         warmUpLength = c.value(.warmUpLength, warmUpLength)
         speakExercises = c.value(.speakExercises, speakExercises)
+        speechVoices = c.value(.speechVoices, speechVoices)
         getReadyCountdown = c.value(.getReadyCountdown, getReadyCountdown)
         disabledExerciseIDs = c.value(.disabledExerciseIDs, disabledExerciseIDs)
         customExercises = c.value(.customExercises, customExercises)

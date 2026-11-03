@@ -659,6 +659,9 @@ extension AppDelegate {
         }
 
         SoundPlayer.shared.isMuted = true
+        Speaker.shared.isMuted = true
+        // Shows the voice rows in the Warm-up tab.
+        store.settings.speakExercises = true
         if CommandLine.arguments.contains("--showcase") { applyShowcaseState() }
         Task { @MainActor in
             let languages: [AppLanguage] = CommandLine.arguments.contains("--all-languages") ? [.en, .uk, .ru] : [store.settings.language]

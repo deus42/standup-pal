@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 
 struct WarmUpSettings: View {
@@ -6,6 +7,8 @@ struct WarmUpSettings: View {
     @ViewState private var newName = ""
     @ViewState private var newInstructions = ""
     @ViewState private var newSeconds = 30
+    /// Bumped when macOS finishes downloading a voice, so the voice list refreshes.
+    @ViewState private var voicesVersion = 0
 
     var body: some View {
         VStack(spacing: 16) {
@@ -21,7 +24,13 @@ struct WarmUpSettings: View {
                 SettingsToggle(title: tr("3-second get-ready countdown", "Відлік 3 секунди перед стартом", "Отсчёт 3 секунды перед стартом"),
                                isOn: $store.settings.getReadyCountdown)
                 SettingsToggle(title: tr("Read exercise names aloud", "Озвучувати назви вправ", "Озвучивать названия упражнений"),
-                               isOn: $store.settings.speakExercises, divider: false)
+                               isOn: $store.settings.speakExercises, divider: store.settings.speakExercises)
+                if store.settings.speakExercises {
+                    voiceRows
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: AVSpeechSynthesizer.availableVoicesDidChangeNotification)) { _ in
+                voicesVersion += 1
             }
 
             SettingsGroup(title: tr("Exercises in the mix", "Вправи в міксі", "Упражнения в миксе"),
@@ -62,6 +71,52 @@ struct WarmUpSettings: View {
             }
             .disabled(!canAdd)
         }
+    }
+
+    @ViewBuilder private var voiceRows: some View {
+        let _ = voicesVersion
+        let lang = L10n.lang
+        let voices = Speaker.voices(for: lang)
+        let current = Speaker.voice(for: lang, chosen: store.settings.speechVoices[lang.rawValue])
+        let basic = current.map { $0.quality == .default } ?? true
+        SettingsRow(title: tr("Voice", "Голос", "Голос"), divider: basic) {
+            HStack(spacing: 10) {
+                Button(tr("Listen", "Прослухати", "Прослушать")) { Speaker.shared.preview() }
+                    .buttonStyle(PillButtonStyle(compact: true))
+                    .fixedSize()
+                Picker("", selection: voiceBinding(lang, installed: voices)) {
+                    Text(tr("Best installed", "Найкращий встановлений", "Лучший установленный")).tag("")
+                    ForEach(voices, id: \.identifier) { Text(Speaker.label($0)).tag($0.identifier) }
+                }
+                .labelsHidden()
+                .fixedSize()
+            }
+        }
+        if basic {
+            let name = current?.name ?? tr("a voice", "голос", "голос")
+            SettingsRow(title: tr("Get a clearer voice", "Чистіший голос", "Более чистый голос"),
+                        subtitle: tr("Basic voices sound robotic. Download the Enhanced version of \(name) from the list of voices.",
+                                     "Базові голоси звучать роботизовано. Завантаж покращену (Enhanced) версію голосу «\(name)» зі списку голосів.",
+                                     "Базовые голоса звучат роботизированно. Загрузи улучшенную (Enhanced) версию голоса «\(name)» из списка голосов."),
+                        divider: false) {
+                Button(tr("Open Settings", "Відкрити налаштування", "Открыть настройки")) { Speaker.openVoiceSettings() }
+                    .buttonStyle(PillButtonStyle(compact: true))
+                    .fixedSize()
+            }
+        }
+    }
+
+    private func voiceBinding(_ lang: Lang, installed: [AVSpeechSynthesisVoice]) -> Binding<String> {
+        Binding(
+            get: {
+                let chosen = store.settings.speechVoices[lang.rawValue] ?? ""
+                return installed.contains { $0.identifier == chosen } ? chosen : ""
+            },
+            set: { id in
+                store.settings.speechVoices[lang.rawValue] = id.isEmpty ? nil : id
+                Speaker.shared.preview()
+            }
+        )
     }
 
     private var canAdd: Bool { store.settings.customExercises.count < ExerciseLibrary.maxCustom }

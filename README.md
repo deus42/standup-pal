@@ -43,6 +43,7 @@ It's a native macOS app: a few megabytes of Swift, no Electron, no accounts, no 
 - 21 built-in desk-friendly exercises, including physio favourites like chin tucks, shoulder-blade squeezes and desk push-ups. Switch any of them off, or **add your own**.
 - The pet **demonstrates every move**: it reaches, marches, twists, side-bends, squats and breathes along with you.
 - Countdown ring, "up next" preview, pause/skip/end, optional spoken exercise names, and confetti at the end.
+- Spoken exercise names use the best voice installed on your Mac. The bundled voices sound robotic, so Settings › Warm-up › Voice lets you listen, pick a voice, and open System Settings to download an Enhanced one (for Ukrainian, that's Lesya Enhanced).
 
 ### 💪 Your own exercise reminders
 - Push-ups, water, a walk, anything: pick an emoji and a note, set times ("11:30 and 16:30") or an interval ("every 2 h, 10:00–18:00"), and the days.
