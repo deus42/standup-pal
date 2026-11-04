@@ -179,7 +179,7 @@ Sources/StandUpPal/
 
 ```bash
 swift build          # debug build
-scripts/test.sh      # 63 tests: scheduling, live ticks, flows, persistence, routines, languages, palettes, gear, sync, updates, programs, habits, voices
+scripts/test.sh      # 65 tests: scheduling, live ticks, flows, persistence, routines, languages, palettes, gear, sync, updates, programs, habits, voices
 ```
 
 Handy flags for the built binary:
